@@ -77,25 +77,28 @@ bool VioInterface::addEigenImage(const okvis::Time & stamp, size_t cameraIndex,
 }
 
 // Set the callback to be called every time a new state is estimated.
+//这个函数从没被调用过
 void VioInterface::setStateCallback(const StateCallback & stateCallback) {
   stateCallback_ = stateCallback;
 }
-
+//这个函数在main函数中被调用过
 // Set the fullStateCallback to be called every time a new state is estimated.
-void VioInterface::setFullStateCallback(
-    const FullStateCallback & fullStateCallback) {
+void VioInterface::setFullStateCallback( const FullStateCallback & fullStateCallback)
+{
   fullStateCallback_ = fullStateCallback;
 }
 
 // Set the callback to be called every time a new state is estimated.
-void VioInterface::setFullStateCallbackWithExtrinsics(
-    const FullStateCallbackWithExtrinsics & fullStateCallbackWithExtrinsics) {
+//这个函数从没被调用过
+void VioInterface::setFullStateCallbackWithExtrinsics(const FullStateCallbackWithExtrinsics & fullStateCallbackWithExtrinsics) 
+{
   fullStateCallbackWithExtrinsics_ = fullStateCallbackWithExtrinsics;
 }
 
 // Set the fullStateCallbackWithExtrinsics to be called every time a new state is estimated.
-void VioInterface::setLandmarksCallback(
-    const LandmarksCallback & landmarksCallback) {
+//这个函数从没被调用过
+void VioInterface::setLandmarksCallback(const LandmarksCallback & landmarksCallback) 
+{
   landmarksCallback_ = landmarksCallback;
 }
 

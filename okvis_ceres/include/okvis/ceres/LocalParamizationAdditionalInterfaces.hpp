@@ -74,7 +74,7 @@ class LocalParamizationAdditionalInterfaces {
   /// @param[in] x_raw Linearisation point of the variable.
   /// @param[in] purturbation_magnitude Magnitude of the delta used for numeric Jacobians.
   /// \return True on success.
-  virtual bool verify(const double* x_raw, double purturbation_magnitude = 1.0e-6) const ;
+  virtual bool verify(const double* x_raw, double purturbation_magnitude = 1.0e-6) const ;//这个类已经有了自己的定义
 };
 
 }  // namespace ceres

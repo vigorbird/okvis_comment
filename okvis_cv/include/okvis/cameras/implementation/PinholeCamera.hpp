@@ -144,11 +144,12 @@ CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(
 }
 
 // Projects a Euclidean point to a 2d image point (projection).
+//intrinsicsJacobian默认等于NULL。 pointJacobian是BA方程关于三维空间点的雅可比
+//这里一定要注意了!!!!!!!!在orb代码中我们一得到图像就对其进行了畸变校正，这样我们就可以使用理想的针孔模型。
+//而这里作者没有使用畸变校正，而是将三维空间点投影到图像时考虑了这个畸变模型，并将这个畸变模型的雅克比给计算出来了。
 template<class DISTORTION_T>
-CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(
-    const Eigen::Vector3d & point, Eigen::Vector2d * imagePoint,
-    Eigen::Matrix<double, 2, 3> * pointJacobian,
-    Eigen::Matrix2Xd * intrinsicsJacobian) const
+CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(const Eigen::Vector3d & point, Eigen::Vector2d * imagePoint, 
+                                                                  Eigen::Matrix<double, 2, 3> * pointJacobian,Eigen::Matrix2Xd * intrinsicsJacobian) const
 {
   // handle singularity
   if (fabs(point[2]) < 1.0e-12) {
@@ -169,7 +170,8 @@ CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   Eigen::Vector2d imagePoint2;
 
   bool distortionSuccess;
-  if (intrinsicsJacobian) {
+  if (intrinsicsJacobian) 
+  {
     // get both Jacobians
     intrinsicsJacobian->resize(2, NumIntrinsics);
 
@@ -177,8 +179,7 @@ CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(
                                             &distortionJacobian,
                                             &intrinsicsJacobianDistortion);
     // compute the intrinsics Jacobian
-    intrinsicsJacobian->template topLeftCorner<2, 2>() =
-        imagePoint2.asDiagonal();
+    intrinsicsJacobian->template topLeftCorner<2, 2>() = imagePoint2.asDiagonal();
     intrinsicsJacobian->template block<2, 2>(0,2) = Eigen::Matrix2d::Identity();
 
     if (distortion_t::NumDistortionIntrinsics > 0) {
@@ -188,22 +189,17 @@ CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(
     }
   } else {
     // only get point Jacobian
-    distortionSuccess = distortion_.distort(imagePointUndistorted, &imagePoint2,
-                                            &distortionJacobian);
+    distortionSuccess = distortion_.distort(imagePointUndistorted, &imagePoint2, &distortionJacobian);
   }
 
   // compute the point Jacobian in any case
   Eigen::Matrix<double, 2, 3> & J = *pointJacobian;
   J(0, 0) = fu_ * distortionJacobian(0, 0) * rz;
   J(0, 1) = fu_ * distortionJacobian(0, 1) * rz;
-  J(0, 2) = -fu_
-      * (point[0] * distortionJacobian(0, 0)
-          + point[1] * distortionJacobian(0, 1)) * rz2;
+  J(0, 2) = -fu_* (point[0] * distortionJacobian(0, 0) + point[1] * distortionJacobian(0, 1)) * rz2;
   J(1, 0) = fv_ * distortionJacobian(1, 0) * rz;
   J(1, 1) = fv_ * distortionJacobian(1, 1) * rz;
-  J(1, 2) = -fv_
-      * (point[0] * distortionJacobian(1, 0)
-          + point[1] * distortionJacobian(1, 1)) * rz2;
+  J(1, 2) = -fv_* (point[0] * distortionJacobian(1, 0) + point[1] * distortionJacobian(1, 1)) * rz2;
 
   // scale and offset
   (*imagePoint)[0] = fu_ * imagePoint2[0] + cu_;
@@ -218,7 +214,8 @@ CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::project(
   if (CameraBase::isMasked(*imagePoint)) {
     return CameraBase::ProjectionStatus::Masked;
   }
-  if(point[2]>0.0){
+  if(point[2]>0.0)
+  {
     return CameraBase::ProjectionStatus::Successful;
   } else {
     return CameraBase::ProjectionStatus::Behind;
@@ -368,10 +365,10 @@ CameraBase::ProjectionStatus PinholeCamera<DISTORTION_T>::projectHomogeneous(
                                                   &pointJacobian3,
                                                   intrinsicsJacobian);
   } else {
-    status = project(head, imagePoint,
-                                                  &pointJacobian3,
-                                                  intrinsicsJacobian);
+    status = project(head, imagePoint, &pointJacobian3, intrinsicsJacobian);
   }
+  //前三列使用的是project函数得到的2*3雅克比进行更新的
+  //最后一列是0,0
   pointJacobian->template bottomRightCorner<2, 1>() = Eigen::Vector2d::Zero();
   pointJacobian->template topLeftCorner<2, 3>() = pointJacobian3;
   return status;
@@ -422,13 +419,14 @@ void PinholeCamera<DISTORTION_T>::projectHomogeneousBatch(
 // Methods to backproject points
 
 // Back-project a 2d image point into Euclidean space (direction vector).
+//这里一定要注意 这里输入的是没有经过校正过的图像
+//返回的是不带畸变的归一化的平面坐标
 template<class DISTORTION_T>
-bool PinholeCamera<DISTORTION_T>::backProject(
-    const Eigen::Vector2d & imagePoint, Eigen::Vector3d * direction) const
+bool PinholeCamera<DISTORTION_T>::backProject(const Eigen::Vector2d & imagePoint, Eigen::Vector3d * direction) const
 {
   // unscale and center
   Eigen::Vector2d imagePoint2;
-  imagePoint2[0] = (imagePoint[0] - cu_) * one_over_fu_;
+  imagePoint2[0] = (imagePoint[0] - cu_) * one_over_fu_;//one_over_fu_=1/fu
   imagePoint2[1] = (imagePoint[1] - cv_) * one_over_fv_;
 
   // undistort

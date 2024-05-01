@@ -150,8 +150,7 @@ class DenseMatcher {
    * @param matchingAlgorithm The matching algorithm.
    */
   template<typename MATCHING_ALGORITHM_T>
-  void matchBody(
-      void (DenseMatcher::*doWorkPtr)(MatchJob&, MATCHING_ALGORITHM_T*),
+  void matchBody(void (DenseMatcher::*doWorkPtr)(MatchJob&, MATCHING_ALGORITHM_T*),
       MATCHING_ALGORITHM_T& matchingAlgorithm);
 
   /**
@@ -199,16 +198,17 @@ class DenseMatcher {
    * @param[in] shortindexA Keypoint index in frame A.
    * @param[in] i Keypoint index in frame B.
    */
+   //用于匹配的函数
   template<typename MATCHING_ALGORITHM_T>
   inline void listBIteration(MATCHING_ALGORITHM_T* matchingAlgorithm,
                              std::vector<pairing_t>& aiBest, size_t shortindexA,
                              size_t i);
 
-  unsigned char numMatcherThreads_; ///< The set number of threads.
-  unsigned char numBest_;           ///< The set number of best pairings to save.
-  bool useDistanceRatioThreshold_;  ///< Use ratio of best and second best match instead of absolute threshold.
+  unsigned char numMatcherThreads_; ///< The set number of threads.默认是8
+  unsigned char numBest_;           ///< The set number of best pairings to save.默认值是4
+  bool useDistanceRatioThreshold_;  ///< Use ratio of best and second best match instead of absolute threshold.默认值是false
 
-  std::unique_ptr<okvis::ThreadPool> matcherThreadPool_;  ///< The threads
+  std::unique_ptr<okvis::ThreadPool> matcherThreadPool_;  ///< The threads 用于匹配的线程
 };
 
 }  // namespace okvis

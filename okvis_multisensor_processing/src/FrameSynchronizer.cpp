@@ -78,29 +78,35 @@ void FrameSynchronizer::init(okvis::VioParameters& parameters) {
 }
 
 // Adds a new frame to the internal buffer and returns the Multiframe containing the frame.
-std::shared_ptr<okvis::MultiFrame> FrameSynchronizer::addNewFrame(std::shared_ptr<okvis::CameraMeasurement>& frame) {
+//多帧的类MultiFrame(包含左右图像和校正后的时间戳)
+//主要是根据输入的左或者右图像的结构 返回双目相机帧的数据结构
+//例如对时间戳进行处理，时间戳取左右两幅图像的中间值
+std::shared_ptr<okvis::MultiFrame> FrameSynchronizer::addNewFrame(std::shared_ptr<okvis::CameraMeasurement>& frame) 
+{
   assert(numCameras_ > 0);
   okvis::Time frame_stamp = frame->timeStamp;
-  std::shared_ptr<okvis::MultiFrame> multiFrame;
+  std::shared_ptr<okvis::MultiFrame> multiFrame;//要返回的双目相机帧的结构
   int position;
-  if(findFrameByTime(frame_stamp,position)) {
+  if(findFrameByTime(frame_stamp,position)) // 这个条件一般用于第二目相机图像的输入
+  {
     multiFrame = frameBuffer_[position].first;
-    OKVIS_ASSERT_TRUE_DBG(Exception,multiFrame->image(frame->sensorId).empty(),
-                       "Frame for this camera has already been added to multiframe!");
-    if(frame_stamp != multiFrame->timestamp()) {
+    OKVIS_ASSERT_TRUE_DBG(Exception,multiFrame->image(frame->sensorId).empty(),"Frame for this camera has already been added to multiframe!");
+    if(frame_stamp != multiFrame->timestamp()) 
+	{
       // timestamps do not agree. setting timestamp to middlepoint
       frame_stamp += (multiFrame->timestamp()-frame_stamp)*0.5;
-      multiFrame->setTimestamp(frame_stamp);
+      multiFrame->setTimestamp(frame_stamp);//双目相机帧的时间戳取左右两个图像时间戳的中间
     }
     multiFrame->setImage(frame->sensorId,frame->measurement.image);
   }
-  else {
+  else//这个用于相机刚开始初始化时 
+  {
     multiFrame = std::shared_ptr<okvis::MultiFrame>(new okvis::MultiFrame(parameters_.nCameraSystem,frame_stamp,
                                                                           okvis::IdProvider::instance().newId()));
     multiFrame->setImage(frame->sensorId,frame->measurement.image);
     bufferPosition_ = (bufferPosition_+1) % max_frame_sync_buffer_size;
-    if(frameBuffer_[bufferPosition_].first != nullptr
-       && frameBuffer_[bufferPosition_].second != numCameras_) {
+    if(frameBuffer_[bufferPosition_].first != nullptr  && frameBuffer_[bufferPosition_].second != numCameras_) 
+	{
      LOG(ERROR) << "Dropping frame with id " << frameBuffer_[bufferPosition_].first->id();
     }
     frameBuffer_[bufferPosition_].first = multiFrame;
@@ -110,7 +116,8 @@ std::shared_ptr<okvis::MultiFrame> FrameSynchronizer::addNewFrame(std::shared_pt
 }
 
 // Inform the synchronizer that a frame in the multiframe has completed keypoint detection and description.
-bool FrameSynchronizer::detectionEndedForMultiFrame(uint64_t multiFrameId) {
+bool FrameSynchronizer::detectionEndedForMultiFrame(uint64_t multiFrameId) 
+{
   int position;
   bool found = findFrameById(multiFrameId,position);
   if(found) {
@@ -148,11 +155,11 @@ bool FrameSynchronizer::detectionCompletedForAllCameras(uint64_t multiFrameId) {
 // is given as a parameter in okvis::VioParameters::sensors_information::frameTimestampTolerance
 bool FrameSynchronizer::findFrameByTime(const okvis::Time& timestamp, int& position) const{
   bool found = false;
-  for(int i=0; i < max_frame_sync_buffer_size; ++i) {
+  for(int i=0; i < max_frame_sync_buffer_size; ++i) //max_frame_sync_buffer_size=3 一直等于3 没有改变过
+  {
     position = (bufferPosition_+i)%max_frame_sync_buffer_size;
-    if(frameBuffer_[position].first != nullptr &&
-       (frameBuffer_[position].first->timestamp() == timestamp ||
-        fabs((frameBuffer_[position].first->timestamp()-timestamp).toSec()) < timeTol_)) {
+    if(frameBuffer_[position].first != nullptr && (frameBuffer_[position].first->timestamp() == timestamp || fabs((frameBuffer_[position].first->timestamp()-timestamp).toSec()) < timeTol_)) 
+    {
       found = true;
       break;
     }

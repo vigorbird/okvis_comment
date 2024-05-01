@@ -46,7 +46,8 @@ namespace IdProvider {
 std::atomic<uint64_t> _id(0);
 
 // get a unique new ID.
-uint64_t instance::newId() {
+uint64_t instance::newId() 
+{
   const uint64_t retVal = ++_id;
   return retVal;
 }

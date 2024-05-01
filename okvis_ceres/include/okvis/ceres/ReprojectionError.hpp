@@ -52,6 +52,9 @@ namespace ceres {
 
 /// \brief The 2D keypoint reprojection error.
 /// \tparam GEOMETRY_TYPE The camera gemetry type.
+//输入的模板类型GEOMETRY_TYPE = camera_geometry_t
+//继承关系 class ReprojectionError2dBase : public ReprojectionErrorBase 
+//继承关系 class ReprojectionErrorBase : public ::ceres::SizedCostFunction<2 ,7 , 4, 7>,public ErrorInterface {
 template<class GEOMETRY_TYPE>
 class ReprojectionError : public ReprojectionError2dBase
 {
@@ -139,8 +142,7 @@ class ReprojectionError : public ReprojectionError2dBase
    * @param jacobians Pointer to the Jacobians (see ceres)
    * @return success of th evaluation.
    */
-  virtual bool Evaluate(double const* const * parameters, double* residuals,
-                        double** jacobians) const;
+  virtual bool Evaluate(double const* const * parameters, double* residuals,double** jacobians) const;
 
   /**
    * @brief This evaluates the error term and additionally computes

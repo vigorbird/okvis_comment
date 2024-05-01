@@ -81,6 +81,7 @@ class ImuFrameSynchronizer {
 
  private:
   okvis::Time newestImuDataStamp_;           ///< Newest IMU data timestamp.
+  //需要imu到哪个时刻的测量值，一般为双目数据结构时间戳+0.02秒
   okvis::Time imuDataNeededUntil_;           ///< A thread is waiting for IMU data newer or equal to this timestamp.
   std::condition_variable gotNeededImuData_; ///< Condition variable for waiting and notyfing.
   std::mutex mutex_;                         ///< Mutex.

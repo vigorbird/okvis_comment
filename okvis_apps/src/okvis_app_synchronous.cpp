@@ -142,6 +142,7 @@ class PoseViewer
 
     drawing_ = false; // notify
   }
+  
   void display()
   {
     while (drawing_) {
@@ -151,6 +152,7 @@ class PoseViewer
     showing_ = false;
     cv::waitKey(1);
   }
+  
  private:
   cv::Point2d convertToImageCoordinates(const cv::Point2d & pointInMeters) const
   {
@@ -191,80 +193,94 @@ class PoseViewer
   double _max_y = 0.5;
   double _max_z = 0.5;
   const double _frameScale = 0.2;  // [m]
-  std::atomic_bool drawing_;
+  std::atomic_bool drawing_;//原子操作 避免多线程对同一资源的操作
   std::atomic_bool showing_;
 };
 
 // this is just a workbench. most of the stuff here will go into the Frontend class.
+//输入的参数命令 = .okvis_app_synchronous path/to/okvis/config/config_fpga_p2_euroc.yaml path/to/MH_01_easy/mav0/
 int main(int argc, char **argv)
 {
   google::InitGoogleLogging(argv[0]);
   FLAGS_stderrthreshold = 0;  // INFO: 0, WARNING: 1, ERROR: 2, FATAL: 3
   FLAGS_colorlogtostderr = 1;
 
-  if (argc != 3 && argc != 4) {
+  if (argc != 3 && argc != 4) 
+  {
     LOG(ERROR)<<
     "Usage: ./" << argv[0] << " configuration-yaml-file dataset-folder [skip-first-seconds]";
     return -1;
   }
 
   okvis::Duration deltaT(0.0);
-  if (argc == 4) {
+  if (argc == 4) 
+  {
     deltaT = okvis::Duration(atof(argv[3]));
   }
 
   // read configuration file
-  std::string configFilename(argv[1]);
+  std::string configFilename(argv[1]);//配置文件名
 
   okvis::VioParametersReader vio_parameters_reader(configFilename);
   okvis::VioParameters parameters;
   vio_parameters_reader.getParameters(parameters);
 
-  okvis::ThreadedKFVio okvis_estimator(parameters);
+  //搜索  ThreadedKFVio构造函数
+  okvis::ThreadedKFVio okvis_estimator(parameters);//超级重要的函数 里面开启了线程!!!!!!!!!!!!!!!!!!!!!! 并设置了阻塞的状态为false
 
   PoseViewer poseViewer;
-  okvis_estimator.setFullStateCallback(
-      std::bind(&PoseViewer::publishFullStateAsCallback, &poseViewer,
-                std::placeholders::_1, std::placeholders::_2,
-                std::placeholders::_3, std::placeholders::_4));
+  //PoseViewer::publishFullStateAsCallback这个函数在publisherLoop中会被调用一次
+  //bind函数绑定带参数的某个类的成员函数时，第二个输入的参数应该是这个类的引用
+  //设定了publisherLoop线程中的回调函数
+  okvis_estimator.setFullStateCallback(  std::bind(&PoseViewer::publishFullStateAsCallback, 
+  													&poseViewer, 
+  													std::placeholders::_1, 
+  													std::placeholders::_2,
+  													std::placeholders::_3, 
+  													std::placeholders::_4));
 
-  okvis_estimator.setBlocking(true);
+  okvis_estimator.setBlocking(true);//设置了阻塞的状态为 true
 
   // the folder path
+  //数据集文件夹所在位置
   std::string path(argv[2]);
 
-  const unsigned int numCameras = parameters.nCameraSystem.numCameras();
+  const unsigned int numCameras = parameters.nCameraSystem.numCameras();//如果是双目的话这个参数等于2
 
   // open the IMU file
   std::string line;
   std::ifstream imu_file(path + "/imu0/data.csv");
+  /*这里我们把保证代码稳定性的代码注释掉 方便看
   if (!imu_file.good()) {
     LOG(ERROR)<< "no imu file found at " << path+"/imu0/data.csv";
     return -1;
-  }
+  }*/
   int number_of_lines = 0;
   while (std::getline(imu_file, line))
     ++number_of_lines;
+  /*这里我们把保证代码稳定性的代码注释掉 方便看
   LOG(INFO)<< "No. IMU measurements: " << number_of_lines-1;
   if (number_of_lines - 1 <= 0) {
     LOG(ERROR)<< "no imu messages present in " << path+"/imu0/data.csv";
     return -1;
-  }
+  }*/
   // set reading position to second line
   imu_file.clear();
   imu_file.seekg(0, std::ios::beg);
-  std::getline(imu_file, line);
+  std::getline(imu_file, line);//为了读取第一行，为了方便后面的直接读取数据
 
   std::vector<okvis::Time> times;
   okvis::Time latest(0);
   int num_camera_images = 0;
-  std::vector < std::vector < std::string >> image_names(numCameras);
-  for (size_t i = 0; i < numCameras; ++i) {
+  std::vector < std::vector < std::string >> image_names(numCameras);//存储的是左右相机的图像名称。这个变量存储的顺序是左图像按照时间排序的名称，右图像按照时间排序的名称
+  for (size_t i = 0; i < numCameras; ++i) //遍历左右图像
+  {
     num_camera_images = 0;
     std::string folder(path + "/cam" + std::to_string(i) + "/data");
 
-    for (auto it = boost::filesystem::directory_iterator(folder);
-        it != boost::filesystem::directory_iterator(); it++) {
+    //遍历某个相机的所有图像文件
+    for (auto it = boost::filesystem::directory_iterator(folder); it != boost::filesystem::directory_iterator(); it++) 
+	{
       if (!boost::filesystem::is_directory(it->path())) {  //we eliminate directories
         num_camera_images++;
         image_names.at(i).push_back(it->path().filename().string());
@@ -283,21 +299,26 @@ int main(int argc, char **argv)
     std::sort(image_names.at(i).begin(), image_names.at(i).end());
   }
 
-  std::vector < std::vector < std::string > ::iterator
-      > cam_iterators(numCameras);
-  for (size_t i = 0; i < numCameras; ++i) {
+  std::vector < std::vector <std::string>::iterator > cam_iterators(numCameras);
+  for (size_t i = 0; i < numCameras; ++i) 
+  {
     cam_iterators.at(i) = image_names.at(i).begin();
   }
 
+  //下面开始主循环了!!!!!!!!!!!!!!!!!!!!!!!!!
   int counter = 0;
-  okvis::Time start(0.0);
-  while (true) {
-    okvis_estimator.display();
+  okvis::Time start(0.0);//存储的是第一张左图像的时间戳
+  //遍历所有的图像
+  while (true) 
+  {
+    okvis_estimator.display();//
     poseViewer.display();
 
     // check if at the end
-    for (size_t i = 0; i < numCameras; ++i) {
-      if (cam_iterators[i] == image_names[i].end()) {
+    for (size_t i = 0; i < numCameras; ++i) 
+	{
+      if (cam_iterators[i] == image_names[i].end()) 
+	  {
         std::cout << std::endl << "Finished. Press any key to exit." << std::endl << std::flush;
         cv::waitKey();
         return 0;
@@ -307,73 +328,80 @@ int main(int argc, char **argv)
     /// add images
     okvis::Time t;
 
-    for (size_t i = 0; i < numCameras; ++i) {
-      cv::Mat filtered = cv::imread(
-          path + "/cam" + std::to_string(i) + "/data/" + *cam_iterators.at(i),
-          cv::IMREAD_GRAYSCALE);
-      std::string nanoseconds = cam_iterators.at(i)->substr(
-          cam_iterators.at(i)->size() - 13, 9);
-      std::string seconds = cam_iterators.at(i)->substr(
-          0, cam_iterators.at(i)->size() - 13);
-      t = okvis::Time(std::stoi(seconds), std::stoi(nanoseconds));
-      if (start == okvis::Time(0.0)) {
+    //将左右图像和imu测量值加入到okvis_estimator结构中
+    for (size_t i = 0; i < numCameras; ++i) //遍历左右图像
+	{
+      cv::Mat filtered = cv::imread(path + "/cam" + std::to_string(i) + "/data/" + *cam_iterators.at(i),cv::IMREAD_GRAYSCALE);
+      std::string nanoseconds = cam_iterators.at(i)->substr(cam_iterators.at(i)->size() - 13, 9);
+	  std::string seconds = cam_iterators.at(i)->substr(0, cam_iterators.at(i)->size() - 13);
+      t = okvis::Time(std::stoi(seconds), std::stoi(nanoseconds));//表示相机的时间戳
+      if (start == okvis::Time(0.0)) //只有第一个左相机时才会进入这个条件，而且只进入一次
+	  {
         start = t;
       }
 
       // get all IMU measurements till then
+      //读取imu的数据直到图像的时间戳
       okvis::Time t_imu = start;
       do {
-        if (!std::getline(imu_file, line)) {
-          std::cout << std::endl << "Finished. Press any key to exit." << std::endl << std::flush;
-          cv::waitKey();
-          return 0;
-        }
+		        if (!std::getline(imu_file, line)) 
+				{
+		          std::cout << std::endl << "Finished. Press any key to exit." << std::endl << std::flush;
+		          cv::waitKey();
+		          return 0;
+		        }
 
-        std::stringstream stream(line);
-        std::string s;
-        std::getline(stream, s, ',');
-        std::string nanoseconds = s.substr(s.size() - 9, 9);
-        std::string seconds = s.substr(0, s.size() - 9);
+		        std::stringstream stream(line);
+		        std::string s;
+		        std::getline(stream, s, ',');
+		        std::string nanoseconds = s.substr(s.size() - 9, 9);
+		        std::string seconds = s.substr(0, s.size() - 9);
 
-        Eigen::Vector3d gyr;
-        for (int j = 0; j < 3; ++j) {
-          std::getline(stream, s, ',');
-          gyr[j] = std::stof(s);
-        }
+		        Eigen::Vector3d gyr;//得到IMU角度速度的读数  单位是 rad/s
+		        for (int j = 0; j < 3; ++j) 
+				{
+		          std::getline(stream, s, ',');
+		          gyr[j] = std::stof(s);
+		        }
 
-        Eigen::Vector3d acc;
-        for (int j = 0; j < 3; ++j) {
-          std::getline(stream, s, ',');
-          acc[j] = std::stof(s);
-        }
+		        Eigen::Vector3d acc;//得到IMU加速度的读数 单位是 m/s2
+		        for (int j = 0; j < 3; ++j) 
+				{
+		          std::getline(stream, s, ',');
+		          acc[j] = std::stof(s);
+		        }
 
-        t_imu = okvis::Time(std::stoi(seconds), std::stoi(nanoseconds));
+		        t_imu = okvis::Time(std::stoi(seconds), std::stoi(nanoseconds));//得到imu的时间戳
+		        // add the IMU measurement for (blocking) processing
+		        if (t_imu - start + okvis::Duration(1.0) > deltaT)//只保留第一帧前面1s之内的数据， 
+				{
+					//向imu队列中插入imu的测量值 搜索 bool ThreadedKFVio::addImuMeasurement(
+		          okvis_estimator.addImuMeasurement(t_imu, acc, gyr);//比较重要的函数!!!!!!!!!!!!!!!!!!1
+		        }
 
-        // add the IMU measurement for (blocking) processing
-        if (t_imu - start + okvis::Duration(1.0) > deltaT) {
-          okvis_estimator.addImuMeasurement(t_imu, acc, gyr);
-        }
-
-      } while (t_imu <= t);
+      } while (t_imu <= t);//do while先执行后判断
 
       // add the image to the frontend for (blocking) processing
-      if (t - start > deltaT) {
-        okvis_estimator.addImage(t, i, filtered);
+      if (t - start > deltaT) //deltaT默认=0
+	  {
+	    //搜索 bool ThreadedKFVio::addImage(
+        okvis_estimator.addImage(t, i, filtered);//filtered=读取的灰度图像 i表示是左图像还是右图像，加入到图像队列中
       }
 
       cam_iterators[i]++;
-    }
+    }//表示遍历完左右图像了
+	
     ++counter;
 
-    // display progress
-    if (counter % 20 == 0) {
-      std::cout << "\rProgress: "
-          << int(double(counter) / double(num_camera_images) * 100) << "%  "
-          << std::flush;
+    // display progress 显示处理的进度
+    if (counter % 20 == 0) 
+	{
+      std::cout << "\rProgress: "<< int(double(counter) / double(num_camera_images) * 100) << "%  "<< std::flush;
     }
 
-  }
+  }//结束最大的while循环了
 
+  
   std::cout << std::endl << std::flush;
   return 0;
 }

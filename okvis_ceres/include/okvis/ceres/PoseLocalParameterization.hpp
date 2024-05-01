@@ -49,8 +49,11 @@ namespace okvis {
 namespace ceres {
 
 /// \brief Pose local parameterisation, i.e. for orientation dq(dalpha) x q_bar.
-class PoseLocalParameterization : public ::ceres::LocalParameterization,
-    public LocalParamizationAdditionalInterfaces {
+//继承了ceres的类 :ceres::LocalParameterization和 作者自己定义的类
+//作者自己定义的这个类LocalParamizationAdditionalInterfaces提供了参数化的一些其他操作
+//具体的实现详见算法实现文档
+class PoseLocalParameterization : public ::ceres::LocalParameterization, public LocalParamizationAdditionalInterfaces 
+{
  public:
 
   /// \brief Trivial destructor.
@@ -63,6 +66,7 @@ class PoseLocalParameterization : public ::ceres::LocalParameterization,
   /// @param[in] x Variable.
   /// @param[in] delta Perturbation.
   /// @param[out] x_plus_delta Perturbed x.
+  //鲁锦涛讲的函数
   virtual bool Plus(const double* x, const double* delta,
                     double* x_plus_delta) const;
 
@@ -71,18 +75,21 @@ class PoseLocalParameterization : public ::ceres::LocalParameterization,
   /// @param[in] x_plus_delta Perturbed variable.
   /// @param[out] delta minimal difference.
   /// \return True on success.
+  //这个是作者自己定义的类的操作函数
   virtual bool Minus(const double* x, const double* x_plus_delta,
                      double* delta) const;
 
   /// \brief The jacobian of Plus(x, delta) w.r.t delta at delta = 0.
   /// @param[in] x Variable.
   /// @param[out] jacobian The Jacobian.
+  //鲁锦涛讲的函数
   virtual bool ComputeJacobian(const double* x, double* jacobian) const;
 
   /// \brief Computes the Jacobian from minimal space to naively overparameterised space as used by ceres.
   /// @param[in] x Variable.
   /// @param[out] jacobian the Jacobian (dimension minDim x dim).
   /// \return True on success.
+  //这个是作者自己定义的类的操作函数
   virtual bool ComputeLiftJacobian(const double* x, double* jacobian) const;
 
   // provide these as static for easy use elsewhere:
@@ -93,11 +100,13 @@ class PoseLocalParameterization : public ::ceres::LocalParameterization,
   /// @param[in] x Variable.
   /// @param[in] delta Perturbation.
   /// @param[out] x_plus_delta Perturbed x.
+  //这个函数是为了实现Plus函数
   static bool plus(const double* x, const double* delta, double* x_plus_delta);
 
   /// \brief The jacobian of Plus(x, delta) w.r.t delta at delta = 0.
   /// @param[in] x Variable.
   /// @param[out] jacobian The Jacobian.
+  // 为了实现ComputeJacobian函数
   static bool plusJacobian(const double* x, double* jacobian);
 
   /// \brief Computes the minimal difference between a variable x and a perturbed variable x_plus_delta
@@ -105,20 +114,24 @@ class PoseLocalParameterization : public ::ceres::LocalParameterization,
   /// @param[in] x_plus_delta Perturbed variable.
   /// @param[out] delta minimal difference.
   /// \return True on success.
+  //这个函数是为了实现Minus函数
   static bool minus(const double* x, const double* x_plus_delta, double* delta);
 
   /// \brief Computes the Jacobian from minimal space to naively overparameterised space as used by ceres.
   /// @param[in] x Variable.
   /// @param[out] jacobian the Jacobian (dimension minDim x dim).
   /// \return True on success.
+  //是为了实现ComputeLiftJacobian
   static bool liftJacobian(const double* x, double* jacobian);
 
   /// \brief The parameter block dimension.
+  //鲁锦涛讲的函数
   virtual int GlobalSize() const {
     return 7;
   }
 
   /// \brief The parameter block local dimension.
+  //鲁锦涛讲的函数
   virtual int LocalSize() const {
     return 6;
   }

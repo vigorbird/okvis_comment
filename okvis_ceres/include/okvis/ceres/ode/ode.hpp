@@ -55,10 +55,14 @@ namespace ceres {
 namespace ode {
 
 // to make things a bit faster than using angle-axis conversion:
+//ÓÃÓÚ¼ÆËãsin(x)/x
 __inline__ double sinc(double x) {
-  if (fabs(x) > 1e-6) {
-   return sin(x) / x;
-   } else{
+  if (fabs(x) > 1e-6) 
+  {
+   	return sin(x) / x;
+   } 
+  else
+  {
     static const double c_2 = 1.0 / 6.0;
     static const double c_4 = 1.0 / 120.0;
     static const double c_6 = 1.0 / 5040.0;

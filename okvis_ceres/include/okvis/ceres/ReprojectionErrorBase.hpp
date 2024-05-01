@@ -47,8 +47,7 @@ namespace okvis {
 namespace ceres {
 
 /// \brief Reprojection error base class.
-class ReprojectionErrorBase :
-    public ::ceres::SizedCostFunction<2 /* number of residuals */,
+class ReprojectionErrorBase : public ::ceres::SizedCostFunction<2 /* number of residuals */,
         7 /* size of first parameter */, 4 /* size of second parameter */, 7 /* size of third parameter (camera extrinsics) */>,
     public ErrorInterface {
  public:

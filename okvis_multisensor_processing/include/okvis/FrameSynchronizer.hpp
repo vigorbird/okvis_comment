@@ -81,8 +81,7 @@ class FrameSynchronizer {
    * @param frame New frame.
    * @return Multiframe with the added frame in it.
    */
-  std::shared_ptr<okvis::MultiFrame> addNewFrame(
-      std::shared_ptr<okvis::CameraMeasurement> &frame);
+  std::shared_ptr<okvis::MultiFrame> addNewFrame( std::shared_ptr<okvis::CameraMeasurement> &frame);
 
   /**
    * @brief Inform the synchronizer that a frame in the multiframe has completed keypoint detection and description.
@@ -134,9 +133,9 @@ class FrameSynchronizer {
   /// Number of cameras for easy access.
   size_t numCameras_;
   /// Timestamp tolerance to classify multiple frames as being part of the same multiframe.
-  double timeTol_;
+  double timeTol_;//euroc默认设置值是0.05
   /// Circular buffer containing a multiframe pointer and a counter for how many times detection has completed.
-  std::vector<std::pair<std::shared_ptr<okvis::MultiFrame>, size_t> > frameBuffer_;
+  std::vector<std::pair<std::shared_ptr<okvis::MultiFrame>, size_t> > frameBuffer_;//默认这个变量共有三个元素
   /// Position of the newest multiframe in the buffer.
   int bufferPosition_;
 

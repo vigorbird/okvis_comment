@@ -71,8 +71,9 @@ void VioVisualizer::init(okvis::VioParameters& parameters) {
   parameters_ = parameters;
 }
 
-cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,
-                                   size_t image_number) {
+//就是绘制两张图像 一张是当前帧一张是关键帧
+cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,size_t image_number) 
+{
 
   std::shared_ptr<okvis::MultiFrame> keyframe = data->keyFrames;
   std::shared_ptr<okvis::MultiFrame> frame = data->currentFrames;
@@ -87,8 +88,8 @@ cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,
 
   cv::Mat outimg(2 * im_rows, im_cols, CV_8UC3);
   // copy current images Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
-  cv::Mat current = outimg(cv::Rect(0, rowJump, im_cols, im_rows));
-  cv::Mat actKeyframe = outimg(cv::Rect(0, 0, im_cols, im_rows));
+  cv::Mat current = outimg(cv::Rect(0, rowJump, im_cols, im_rows));//当前帧图像绘制在下方
+  cv::Mat actKeyframe = outimg(cv::Rect(0, 0, im_cols, im_rows));//关键帧绘制在上方
 
   cv::cvtColor(frame->image(image_number), current, CV_GRAY2BGR);
   cv::cvtColor(keyframe->image(image_number), actKeyframe, CV_GRAY2BGR);
@@ -96,20 +97,19 @@ cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,
   // the keyframe trafo
   Eigen::Vector2d keypoint;
   Eigen::Vector4d landmark;
-  okvis::kinematics::Transformation lastKeyframeT_CW = parameters_.nCameraSystem
-      .T_SC(image_number)->inverse() * data->T_WS_keyFrame.inverse();
+  okvis::kinematics::Transformation lastKeyframeT_CW = parameters_.nCameraSystem.T_SC(image_number)->inverse() * data->T_WS_keyFrame.inverse();
 
   // find distortion type
-  okvis::cameras::NCameraSystem::DistortionType distortionType = parameters_.nCameraSystem
-      .distortionType(0);
-  for (size_t i = 1; i < parameters_.nCameraSystem.numCameras(); ++i) {
+  okvis::cameras::NCameraSystem::DistortionType distortionType = parameters_.nCameraSystem.distortionType(0);
+  for (size_t i = 1; i < parameters_.nCameraSystem.numCameras(); ++i) 
+  {
     OKVIS_ASSERT_TRUE(Exception,
                       distortionType == parameters_.nCameraSystem.distortionType(i),
                       "mixed frame types are not supported yet");
   }
 
-  for (auto it = data->observations.begin(); it != data->observations.end();
-      ++it) {
+  for (auto it = data->observations.begin(); it != data->observations.end();++it)
+  {
     if (it->cameraIdx != image_number)
       continue;
 
@@ -123,9 +123,11 @@ cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,
 
     // draw matches to keyframe
     keypoint = it->keypointMeasurement;
-    if (fabs(it->landmark_W[3]) > 1.0e-8) {
+    if (fabs(it->landmark_W[3]) > 1.0e-8) 
+	{
       Eigen::Vector4d hPoint = it->landmark_W;
-      if (it->isInitialized) {
+      if (it->isInitialized) 
+	  {
         color = cv::Scalar(0, 255, 0);  // green
       } else {
         color = cv::Scalar(0, 255, 255);  // yellow
@@ -133,14 +135,11 @@ cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,
       Eigen::Vector2d keyframePt;
       bool isVisibleInKeyframe = false;
       Eigen::Vector4d hP_C = lastKeyframeT_CW * hPoint;
-      switch (distortionType) {
-        case okvis::cameras::NCameraSystem::RadialTangential: {
-          if (frame
-              ->geometryAs<
-                  okvis::cameras::PinholeCamera<
-                      okvis::cameras::RadialTangentialDistortion>>(image_number)
-              ->projectHomogeneous(hP_C, &keyframePt)
-              == okvis::cameras::CameraBase::ProjectionStatus::Successful)
+      switch (distortionType)
+	  {
+        case okvis::cameras::NCameraSystem::RadialTangential: 
+		{
+          if (frame->geometryAs<okvis::cameras::PinholeCamera<okvis::cameras::RadialTangentialDistortion>>(image_number)->projectHomogeneous(hP_C, &keyframePt) == okvis::cameras::CameraBase::ProjectionStatus::Successful)
             isVisibleInKeyframe = true;
           break;
         }
@@ -168,35 +167,27 @@ cv::Mat VioVisualizer::drawMatches(VisualizationData::Ptr& data,
           OKVIS_THROW(Exception, "Unsupported distortion type.")
           break;
       }
-      if (fabs(hP_C[3]) > 1.0e-8) {
-        if (hP_C[2] / hP_C[3] < 0.4) {
+      if (fabs(hP_C[3]) > 1.0e-8) 
+	  {
+        if (hP_C[2] / hP_C[3] < 0.4) 
+		{
           isVisibleInKeyframe = false;
         }
       }
 
-      if (isVisibleInKeyframe) {
+      if (isVisibleInKeyframe) 
+	  {
         // found in the keyframe. draw line
-        cv::line(outimg, cv::Point2f(keyframePt[0], keyframePt[1]),
-                 cv::Point2f(keypoint[0], keypoint[1] + rowJump), color, 1,
-                 CV_AA);
-        cv::circle(actKeyframe, cv::Point2f(keyframePt[0], keyframePt[1]),
-                   0.5 * it->keypointSize, color, 1, CV_AA);
+        cv::line(outimg, cv::Point2f(keyframePt[0], keyframePt[1]),cv::Point2f(keypoint[0], keypoint[1] + rowJump), color, 1, CV_AA);
+        cv::circle(actKeyframe, cv::Point2f(keyframePt[0], keyframePt[1]),0.5 * it->keypointSize, color, 1, CV_AA);
       }
     }
     // draw keypoint
-    const double r = 0.5 * it->keypointSize;
-    cv::circle(current, cv::Point2f(keypoint[0], keypoint[1]), r, color, 1,
-    CV_AA);
+    const double r = 0.5 * it->keypointSize;cv::circle(current, cv::Point2f(keypoint[0], keypoint[1]), r, color, 1,CV_AA);
     cv::KeyPoint cvKeypoint;
     frame->getCvKeypoint(image_number, it->keypointIdx, cvKeypoint);
     const double angle = cvKeypoint.angle / 180.0 * M_PI;
-    cv::line(
-        outimg,
-        cv::Point2f(keypoint[0], keypoint[1] + rowJump),
-        cv::Point2f(keypoint[0], keypoint[1] + rowJump)
-            + cv::Point2f(cos(angle), sin(angle)) * r,
-        color, 1,
-        CV_AA);
+    cv::line(  outimg,cv::Point2f(keypoint[0], keypoint[1] + rowJump),cv::Point2f(keypoint[0], keypoint[1] + rowJump)+ cv::Point2f(cos(angle), sin(angle)) * r, color, 1,CV_AA);
   }
   return outimg;
 }

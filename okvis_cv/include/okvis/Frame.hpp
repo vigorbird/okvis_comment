@@ -190,11 +190,11 @@ class Frame
  protected:
   cv::Mat image_;  ///< the image as OpenCV's matrix
   std::shared_ptr<const cameras::CameraBase> cameraGeometry_;  ///< the camera geometry
-  std::shared_ptr<cv::FeatureDetector> detector_;  ///< the detector
-  std::shared_ptr<cv::DescriptorExtractor> extractor_;  ///< the extractor
-  std::vector<cv::KeyPoint> keypoints_;  ///< we store keypoints using OpenCV's struct
-  cv::Mat descriptors_;  ///< we store the descriptors using OpenCV's matrices
-  std::vector<uint64_t> landmarkIds_;  ///< landmark Id, if associated -- 0 otherwise
+  std::shared_ptr<cv::FeatureDetector> detector_;  ///< the detector 存储的是使用何种特征点提取算法
+  std::shared_ptr<cv::DescriptorExtractor> extractor_;  ///< the extractor 存储的是使用何种描述子算法
+  std::vector<cv::KeyPoint> keypoints_;  ///< we store keypoints using OpenCV's struct 存储的是特征点
+  cv::Mat descriptors_;  ///< we store the descriptors using OpenCV's matrices 存储的是特征点的描述子
+  std::vector<uint64_t> landmarkIds_;  ///< landmark Id, if associated -- 0 otherwise 存储的是当前帧特征点和地图点对应的关系，序号是特征点的标号，内容是地图点的序号，如果地图点的序号为0表示这个特征点没有对应的地图点
 };
 
 }  // namespace okvis

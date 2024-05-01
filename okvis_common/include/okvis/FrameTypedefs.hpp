@@ -55,6 +55,7 @@ namespace okvis {
  * A keypoint is identified as the keypoint with index \e keypointIndex
  * in the frame with index \e cameraIndex of multiframe with ID \e frameID.
  */
+//特征点索引号=帧的序号+左相机还是右相机+特征点在这一帧图像中的序号
 struct KeypointIdentifier
 {
   /**
@@ -170,8 +171,7 @@ struct MapPoint
 };
 
 typedef std::vector<MapPoint, Eigen::aligned_allocator<MapPoint> > MapPointVector;
-typedef std::map<uint64_t, MapPoint, std::less<uint64_t>,
-    Eigen::aligned_allocator<MapPoint> > PointMap;
+typedef std::map<uint64_t, MapPoint, std::less<uint64_t>, Eigen::aligned_allocator<MapPoint> > PointMap;
 typedef std::map<uint64_t, okvis::kinematics::Transformation, std::less<uint64_t>,
     Eigen::aligned_allocator<okvis::kinematics::Transformation> > TransformationMap;
 

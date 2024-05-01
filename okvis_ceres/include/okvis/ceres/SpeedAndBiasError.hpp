@@ -50,7 +50,7 @@
 namespace okvis {
 /// \brief ceres Namespace for ceres-related functionality implemented in okvis.
 namespace ceres {
-
+//最重要的函数是Evaluate,EvaluateWithMinimalJacobians实现的Evaluate函数
 class SpeedAndBiasError : public ::ceres::SizedCostFunction<
     9 /* number of residuals */,
     9 /* size of first parameter */>,

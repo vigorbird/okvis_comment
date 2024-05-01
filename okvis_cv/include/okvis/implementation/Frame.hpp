@@ -117,7 +117,7 @@ int Frame::detect()
   // run the detector
   OKVIS_ASSERT_TRUE_DBG(Exception, detector_ != NULL,
                         "Detector not initialised!");
-  detector_->detect(image_, keypoints_);
+  detector_->detect(image_, keypoints_);//这里使用brisk自带的特征点提取函数
   return keypoints_.size();
 }
 
@@ -125,6 +125,7 @@ int Frame::detect()
 ///        That's a negligibly small overhead for many detections.
 ///        \param extractionDirection the extraction direction in camera frame
 ///        returns the number of detected points.
+//详见算法实现文档
 int Frame::describe(const Eigen::Vector3d & extractionDirection)
 {
   // check initialisation
@@ -136,21 +137,23 @@ int Frame::describe(const Eigen::Vector3d & extractionDirection)
   Eigen::Vector2d reprojection;
   Eigen::Matrix<double, 2, 3> Jacobian;
   Eigen::Vector2d eg_projected;
-  for (size_t k = 0; k < keypoints_.size(); ++k) {
+  for (size_t k = 0; k < keypoints_.size(); ++k)//遍历特征点
+  {
     cv::KeyPoint& ckp = keypoints_[k];
-    // project ray
+    // project ray 得到的ep是归一化平面三维坐标，第三个维度恒定为1
+    //搜索 bool PinholeCamera<DISTORTION_T>::backProject(const Eigen::Vector2d & imagePoint, Eigen::Vector3d * direction) const
     cameraGeometry_->backProject(Eigen::Vector2d(ckp.pt.x, ckp.pt.y), &ep);
-    // obtain image Jacobian
-    cameraGeometry_->project(ep, &reprojection, &Jacobian);
+    // obtain image Jacobian。 jacobian 是 ba方程中关于三维点的雅克比
+    cameraGeometry_->project(ep, &reprojection, &Jacobian);//搜索 PinholeCamera<DISTORTION_T>::project(
     // multiply with gravity direction
-    eg_projected = Jacobian * extractionDirection;
+    eg_projected = Jacobian * extractionDirection;//Jacobian是一个2*3的矩阵
     double angle = atan2(eg_projected[1], eg_projected[0]);
     // set
-    ckp.angle = angle / M_PI * 180.0;
+    ckp.angle = angle / M_PI * 180.0;//特征点的主方向单位是度
   }
 
   // extraction
-  extractor_->compute(image_, keypoints_, descriptors_);
+  extractor_->compute(image_, keypoints_, descriptors_);//得到描述子descriptors_
   landmarkIds_ = std::vector<uint64_t>(keypoints_.size(),0);
   return keypoints_.size();
 }
@@ -227,7 +230,7 @@ bool Frame::getKeypoint(size_t keypointIdx, Eigen::Vector2d & keypoint) const
 // get the size of a specific keypoint
 bool Frame::getKeypointSize(size_t keypointIdx, double & keypointSize) const
 {
-#ifndef NDEBUG
+#ifndef NDEBUG //默认进入这个条件
   OKVIS_ASSERT_TRUE(
       Exception,
       keypointIdx < keypoints_.size(),
@@ -260,7 +263,7 @@ const unsigned char * Frame::keypointDescriptor(size_t keypointIdx)
 // Set the landmark ID
 bool Frame::setLandmarkId(size_t keypointIdx, uint64_t landmarkId)
 {
-#ifndef NDEBUG
+#ifndef NDEBUG//默认进入这个条件
   OKVIS_ASSERT_TRUE(
       Exception,
       keypointIdx < landmarkIds_.size(),
@@ -277,7 +280,7 @@ bool Frame::setLandmarkId(size_t keypointIdx, uint64_t landmarkId)
 // Access the landmark ID
 uint64_t Frame::landmarkId(size_t keypointIdx) const
 {
-#ifndef NDEBUG
+#ifndef NDEBUG //默认进入这个条件
   OKVIS_ASSERT_TRUE(
       Exception,
       keypointIdx < landmarkIds_.size(),

@@ -169,13 +169,13 @@ class FrameNoncentralAbsoluteAdapter : public AbsoluteAdapterBase {
   opengv::bearingVectors_t bearingVectors_;
 
   /// The world coordinates of the correspondences.
-  opengv::points_t points_;
+  opengv::points_t points_;//保存的是特征点对应的地图点的三维坐标
 
   /// The camera indices of the correspondences.
-  std::vector<size_t> camIndices_;
+  std::vector<size_t> camIndices_;//对于双目就是保存的两个值 0 和1 0表示左相机 1表示右相机
 
   /// The keypoint indices of the correspondences.
-  std::vector<size_t> keypointIndices_;
+  std::vector<size_t> keypointIndices_;//有效的特征点的序号
 
   /// The position of the cameras seen from the viewpoint origin
   opengv::translations_t camOffsets_;
@@ -184,7 +184,7 @@ class FrameNoncentralAbsoluteAdapter : public AbsoluteAdapterBase {
   opengv::rotations_t camRotations_;
 
   /// The standard deviations of the bearing vectors in [rad].
-  std::vector<double> sigmaAngles_;
+  std::vector<double> sigmaAngles_;//由特征点的邻域半径和焦距得到
 
 };
 

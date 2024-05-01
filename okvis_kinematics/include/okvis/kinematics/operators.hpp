@@ -58,6 +58,7 @@ namespace kinematics {
 /// @param[in] x First vector element.
 /// @param[in] y Second vector element.
 /// @param[in] z Third vector element.
+//向量的反对称矩阵
 template<typename Scalar_T>
 inline Eigen::Matrix<Scalar_T, 3, 3> crossMx(Scalar_T x, Scalar_T y, Scalar_T z)
 {
@@ -78,6 +79,7 @@ inline Eigen::Matrix<Scalar_T, 3, 3> crossMx(Scalar_T x, Scalar_T y, Scalar_T z)
 ///        Adopted from Schweizer-Messer by Paul Furgale.
 /// \tparam Derived_T The vector type, auto-deducible.
 /// @param[in] v The vector.
+//向量的反对称矩阵
 template<typename Derived_T>
 inline Eigen::Matrix<typename Eigen::internal::traits<Derived_T>::Scalar, 3, 3> crossMx(
     Eigen::MatrixBase<Derived_T> const & v)
@@ -88,7 +90,7 @@ inline Eigen::Matrix<typename Eigen::internal::traits<Derived_T>::Scalar, 3, 3> 
 }
 
 /// \brief Plus matrix of a quaternion, i.e. q_AB*q_BC = plus(q_AB)*q_BC.coeffs().
-/// @param[in] q_AB A Quaternion.
+/// @param[in] q_AB A Quaternion.对应QK论文 公式15 Q^+1
 inline Eigen::Matrix4d plus(const Eigen::Quaterniond & q_AB) {
   Eigen::Vector4d q = q_AB.coeffs();
   Eigen::Matrix4d Q;
@@ -101,7 +103,9 @@ inline Eigen::Matrix4d plus(const Eigen::Quaterniond & q_AB) {
 
 /// \brief Oplus matrix of a quaternion, i.e. q_AB*q_BC = oplus(q_BC)*q_AB.coeffs().
 /// @param[in] q_BC A Quaternion.
-inline Eigen::Matrix4d oplus(const Eigen::Quaterniond & q_BC) {
+//对应QK 论文的公式15 Q^-1
+inline Eigen::Matrix4d oplus(const Eigen::Quaterniond & q_BC) 
+{
   Eigen::Vector4d q = q_BC.coeffs();
   Eigen::Matrix4d Q;
   Q(0,0) =  q[3]; Q(0,1) =  q[2]; Q(0,2) = -q[1]; Q(0,3) =  q[0];

@@ -1,3 +1,4 @@
+#精简版的okvis默认是你已经安装了ceres
 cmake_minimum_required(VERSION 2.8.11)
 
 project(okvis)
@@ -9,14 +10,8 @@ set(OKVIS_VERSION  ${OKVIS_MAJOR_VERSION}.${OKVIS_MINOR_VERSION}.${OKVIS_PATCH_V
 
 # options for build configuration
 #设定编译的参数
-option (USE_SYSTEM_BRISK
-        "Use brisk via find_package rather than downloading it as part of okvis" OFF) #如果你的电脑中已经安装了BRISK，请将这个设置为ON
-option (USE_SYSTEM_CERES
-        "Use ceres via find_package rather than downloading it as part of okvis" OFF)#如果你的电脑中已经安装了ceres请将这个设置为ON
-option (BUILD_APPS
-        "Builds a demo app (which requires boost)" ON) 
-option (BUILD_TESTS
-        "Builds all gtests" OFF) 
+option (BUILD_APPS "Builds a demo app (which requires boost)" ON) 
+
 #设置变量N_CORES的值为3
 SET(N_CORES 3 CACHE STRING "Using N number of cores for parallel build")
 
@@ -119,13 +114,7 @@ endif()
 find_package(Glog REQUIRED)
 include_directories(BEFORE ${GLOG_INCLUDE_DIRS}) 
 
-# brisk
-#默认是不进入这个条件的
-if(${USE_SYSTEM_BRISK})
-  find_package( brisk 2 REQUIRED )
-  include_directories(BEFORE ${BRISK_INCLUDE_DIRS})
-  message(STATUS "Using system brisk. Found at ${BRISK_INCLUDE_DIRS}.")
-else()#默认是进入这个条件的
+# brisk 下载并安装brisk
   ExternalProject_Add(brisk_external
     URL "https://www.doc.ic.ac.uk/~sleutene/software/brisk-2.0.3.zip"    
     INSTALL_DIR ${CMAKE_BINARY_DIR}
@@ -150,79 +139,18 @@ else()#默认是进入这个条件的
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/brisk/)
   install(DIRECTORY ${CMAKE_BINARY_DIR}/lib/CMake/brisk/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/CMake/brisk/)
-endif()
 
-# ceres
+
+
 find_package(SuiteSparse REQUIRED QUIET) #will be needed in any case...
 find_package(CXSparse QUIET) #optional
-#默认是不进入这个条件的
-if(${USE_SYSTEM_CERES})
-  list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-  find_package( Ceres 1.9 REQUIRED )
-  #将给定目录加给编译器搜索到的包含文件 .默认情况下，加到目录列表的最后,如果是before则加在列表的最前面
-  include_directories(BEFORE ${CERES_INCLUDE_DIRS})
-  message(STATUS "Using system Ceres.")
-else()#默认是进入这个条件的 如果你的电脑已经安装了ceres请把下面的这个else分支全部删除
-  set(CERES_VERSION 1.9.0)
-  set(CERES_TAG 7c57de5080c9f5a4f067e2d20b5f33bad5b1ade6) #version 1.9. Newer ones would need adaptation with ceres::ParameterBlock
-  ExternalProject_Add(ceres_external
-    GIT_REPOSITORY https://ceres-solver.googlesource.com/ceres-solver
-    GIT_TAG ${CERES_TAG}
-    UPDATE_COMMAND ""
-    INSTALL_DIR ${CMAKE_BINARY_DIR}
-    CMAKE_ARGS 
-      -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> 
-      -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-      -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} 
-      -DBUILD_EXAMPLES:BOOL=OFF
-      -DBUILD_TESTING:BOOL=OFF
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/ceres
-    BUILD_IN_SOURCE 0
-    BUILD_COMMAND make -j${N_CORES}
-    INSTALL_COMMAND make install
-  )
-  add_library(ceres UNKNOWN IMPORTED)
-  # Heuristic for determining LIB_SUFFIX from ceres
-  set(CERES_LIB_PREFIX "lib")
-  if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND
-    NOT DEFINED LIB_SUFFIX AND
-    NOT CMAKE_CROSSCOMPILING AND
-    CMAKE_SIZEOF_VOID_P EQUAL "8" AND
-    NOT EXISTS "/etc/debian_version" AND
-    NOT EXISTS "/etc/arch-release")
-   set(CERES_LIB_PREFIX "lib64")
-  endif ()
 
-  # to find it from 3rd party software, since not added to registry:
-  set(OKVIS_CERES_CONFIG "${CMAKE_BINARY_DIR}/share/Ceres/")
-
-  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set_property(TARGET ceres PROPERTY IMPORTED_LOCATION
-               ${CMAKE_BINARY_DIR}/${CERES_LIB_PREFIX}/libceres-debug.a )
-  else () 
-    set_property(TARGET ceres PROPERTY IMPORTED_LOCATION
-               ${CMAKE_BINARY_DIR}/${CERES_LIB_PREFIX}/libceres.a )
-  endif ()
-   
-  find_package(OpenMP QUIET)
-  if (OPENMP_FOUND)
-    message(STATUS "OpenMP found")
-    add_definitions(-DUSE_OPENMP)
-    set(CERES_LIBRARIES ceres gomp ${SUITESPARSE_LIBRARIES} ${CXSPARSE_LIBRARIES} ${Eigen_LIBS} ${GLOG_LIBRARY}) #ceres won't export these
-  else ()#默认进入这个条件
-    message(STATUS "OpenMP NOT found")
-    set(CERES_LIBRARIES ceres ${SUITESPARSE_LIBRARIES} ${CXSPARSE_LIBRARIES}  ${Eigen_LIBS} ${GLOG_LIBRARY}) #ceres won't export these
-  endif ()
-  add_dependencies(${CERES_LIBRARIES} ceres_external)
-
-  # install it once built
-  install(FILES ${CMAKE_BINARY_DIR}/${CERES_LIB_PREFIX}/libceres.a 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/include/ceres/ 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/include/ceres/)
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/share/Ceres/
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/Ceres/)
-endif()
+ # ceres
+ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+ find_package( Ceres 1.9 REQUIRED )
+ #将给定目录加给编译器搜索到的包含文件 .默认情况下，加到目录列表的最后,如果是before则加在列表的最前面
+ include_directories(BEFORE ${CERES_INCLUDE_DIRS})
+ message(STATUS "Using system Ceres.")
 
 # OpenGV 这个是比较重要的一步！！！！！！！！！！！！！！需要下载库并安装编译
 #OpenGV is a collection of computer vision methods for solving geometric vision problems. 
@@ -265,37 +193,7 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/include/opengv/
 install(DIRECTORY ${CMAKE_BINARY_DIR}/lib/CMake/opengv/
   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/CMake/opengv/)
 
-  #默认是不进入这个条件的
-if(${BUILD_TESTS})
-  # gmock
-  # http://stackoverflow.com/questions/9689183/cmake-googletest
-  ExternalProject_Add(
-    googlemock
-    URL https://googlemock.googlecode.com/files/gmock-1.7.0.zip
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gmock
-    CMAKE_ARGS -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-    BUILD_COMMAND make -j${N_CORES}
-    INSTALL_COMMAND ""
-  )
-  ExternalProject_Get_Property(googlemock source_dir)
-  set(GMOCK_INCLUDE_DIR ${source_dir}/include)
-  set(GTEST_INCLUDE_DIR ${source_dir}/gtest/include)
-  include_directories(BEFORE ${GMOCK_INCLUDE_DIR})
-  include_directories(BEFORE ${GTEST_INCLUDE_DIR})
-  ExternalProject_Get_Property(googlemock binary_dir)
-  set(GMOCK_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gmock.a)
-  set(GMOCK_LIBRARY gmock)
-  add_library(${GMOCK_LIBRARY} UNKNOWN IMPORTED)
-  set_property(TARGET ${GMOCK_LIBRARY} PROPERTY IMPORTED_LOCATION
-                  ${GMOCK_LIBRARY_PATH} )
-  add_dependencies(${GMOCK_LIBRARY} googlemock)
-  set(GTEST_LIBRARY_PATH ${binary_dir}/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-  set(GTEST_LIBRARY gtestlocal)
-  add_library(${GTEST_LIBRARY} UNKNOWN IMPORTED)
-  set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION
-                  ${GTEST_LIBRARY_PATH})
-  add_dependencies(${GTEST_LIBRARY} googlemock)
-endif()
+
 
 # BUILD LOCAL DEPENDENCIES
 include_directories(okvis_util/include)

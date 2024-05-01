@@ -48,6 +48,25 @@ namespace okvis {
 namespace triangulation {
 
 // Triangulate the intersection of two rays.
+/**
+ * @brief Triangulate the intersection of two rays.
+ * @warning The rays e1 and e2 need to be normalized!
+ * @param[in]  p1 Camera center position of frame A in coordinate frame A
+ * @param[in]  e1 Ray through keypoint of frame A in coordinate frame A.
+ * @param[in]  p2 Camera center position of frame B in coordinate frame A.
+ * @param[in]  e2 Ray through keypoint of frame B in coordinate frame A.
+ * @param[in]  sigma Ray uncertainty.
+ * @param[out] isValid Is the triangulation valid.
+ * @param[out] isParallel Are the rays parallel?
+ * @return Homogeneous coordinates of triangulated point.
+ */
+ ///三角化，形参
+  /// 第一个参数 表示A帧中A系的原点
+  /// 第二个参数 表示A相机特征点所对应的射线在A坐标系下的坐标 单位向量
+  /// 第三个参数 表示B帧原点在A系中的坐标
+  /// 第四个参数 表示B相机特征点所对应的射线在A坐标系下的坐标 单位向量
+  /// sigma为特征点的不确定度，isValid和isParallel是输出的变量
+  //返回的是单位化的坐标
 Eigen::Vector4d triangulateFast(const Eigen::Vector3d& p1,
                                 const Eigen::Vector3d& e1,
                                 const Eigen::Vector3d& p2,
@@ -79,7 +98,8 @@ Eigen::Vector4d triangulateFast(const Eigen::Vector3d& p1,
   A(0, 1) = -A(1, 0);
   A(1, 1) = -e2.dot(e2);
 
-  if (A(1, 0) < 0.0) {
+  if (A(1, 0) < 0.0) 
+  {
     A(1, 0) = -A(1, 0);
     A(0, 1) = -A(0, 1);
     // wrong viewing direction
@@ -87,16 +107,18 @@ Eigen::Vector4d triangulateFast(const Eigen::Vector3d& p1,
 
   bool invertible;
   Eigen::Matrix2d A_inverse;
-  A.computeInverseWithCheck(A_inverse, invertible, 1.0e-6);
+  A.computeInverseWithCheck(A_inverse, invertible, 1.0e-6);//计算A矩阵的逆
   Eigen::Vector2d lambda = A_inverse * b;
-  if (!invertible) {
+  if (!invertible) 
+  {
     isParallel = true; // let's note this.
     // parallel. that's fine. but A is not invertible. so handle it separately.
-    if ((e1.cross(e2)).norm() < 6 * sigma){
+     //A原有点与B往A投影点的叉乘的模，反映夹角的大小，夹角越小，表示投影点越有可能位于A的射线上
+    if ((e1.cross(e2)).norm() < 6 * sigma)
+	{
        isValid = true;  // check parallel
     }
-    return (Eigen::Vector4d((e1[0] + e2[0]) / 2.0, (e1[1] + e2[1]) / 2.0,
-                            (e1[2] + e2[2]) / 2.0, 1e-3).normalized());
+    return (Eigen::Vector4d((e1[0] + e2[0]) / 2.0, (e1[1] + e2[1]) / 2.0, (e1[2] + e2[2]) / 2.0, 1e-3).normalized());
   }
 
   Eigen::Vector3d xm = lambda[0] * e1 + p1;
@@ -105,17 +127,19 @@ Eigen::Vector4d triangulateFast(const Eigen::Vector3d& p1,
 
   // check it
   Eigen::Vector3d error = midpoint - xm;
-  Eigen::Vector3d diff = midpoint - (p1 + 0.5 * t12);
+  Eigen::Vector3d diff = midpoint - (p1 + 0.5 * t12);//p1 + 0.5 * t12=两个相机的中心点
   const double diff_sq = diff.dot(diff);
-  const double chi2 = error.dot(error) * (1.0 / (diff_sq * sigma * sigma));
+  const double chi2 = error.dot(error) * (1.0 / (diff_sq * sigma * sigma));//距离越远chi2越小
 
   isValid = true;
-  if (chi2 > 9) {
+  if (chi2 > 9) 
+  {
     isValid = false;  // reject large chi2-errors
   }
 
   // flip if necessary
-  if (diff.dot(e1) < 0) {
+  if (diff.dot(e1) < 0) 
+  {
     midpoint = (p1 + 0.5 * t12) - diff;
   }
 

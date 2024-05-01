@@ -55,6 +55,8 @@ namespace okvis {
 /// \brief Namespace for helper classes for threadsafe operation.
 namespace threadsafe {
 
+//好像这个类并没有被使用!!! 先注释掉方便看代码
+/*
 class ThreadSafeQueueBase {
  public:
   ThreadSafeQueueBase() = default;
@@ -64,7 +66,7 @@ class ThreadSafeQueueBase {
   virtual void Resume() = 0;
   virtual size_t Size() const = 0;
   virtual bool Empty() const = 0;
-};
+};*/
 
 /**
  * @brief Class that implements a threadsafe FIFO queue.
@@ -72,8 +74,10 @@ class ThreadSafeQueueBase {
  */
 template<typename QueueType>
 class ThreadSafeQueue {
+  //参数void*(*)(void*)是一个函数指针，前面的void为返回值类型，后面的void*为参数类型。
+  //
   friend bool test_funcs(void* (*)(void*), void* (*)(void*),  // NOLINT
-                         const std::string&, bool);
+                         	 const std::string&, bool);
 
  public:
 
@@ -145,21 +149,31 @@ class ThreadSafeQueue {
   /// \param[in] value New entry in queue.
   /// \param[in] max_queue_size Maximum queue size.
   /// \return False if shutdown is requested.
-  bool PushBlockingIfFull(const QueueType& value, size_t max_queue_size) {
-    while (!shutdown_) {
-      pthread_mutex_lock(&mutex_);
-      size_t size = queue_.size();
-      if (size >= max_queue_size) {
-        pthread_cond_wait(&condition_full_, &mutex_);
-      }
-      if (size >= max_queue_size) {
+  bool PushBlockingIfFull(const QueueType& value, size_t max_queue_size) 
+  {
+    while (!shutdown_) //构造函数时默认是false
+	  {
+        pthread_mutex_lock(&mutex_);
+        size_t size = queue_.size();
+      //如果该队列中有数据超过上限则等待
+      //这里的条件变量必须和互斥锁共同使用
+        if (size >= max_queue_size) 
+        {
+          //一般和pthread_cond_signal成对使用
+          //这是一个linux的线程管理函数
+          //condition_full_ 是条件变量
+          //mutex是锁
+          pthread_cond_wait(&condition_full_, &mutex_);
+        }
+        if (size >= max_queue_size) 
+        {
+          pthread_mutex_unlock(&mutex_);
+          continue;
+        }
+        queue_.push(value);
+        pthread_cond_signal(&condition_empty_);  // condition_empty_也是一个条件变量 Signal that data is available.
         pthread_mutex_unlock(&mutex_);
-        continue;
-      }
-      queue_.push(value);
-      pthread_cond_signal(&condition_empty_);  // Signal that data is available.
-      pthread_mutex_unlock(&mutex_);
-      return true;
+        return true;
     }
     return false;
   }
@@ -177,7 +191,7 @@ class ThreadSafeQueue {
       result = true;
     }
     queue_.push(value);
-    pthread_cond_signal(&condition_empty_);  // Signal that data is available.
+    pthread_cond_signal(&condition_empty_);  // condition_empty_也是一个条件变量 Signal that data is available.
     pthread_mutex_unlock(&mutex_);
     return result;
   }
@@ -196,14 +210,18 @@ class ThreadSafeQueue {
    * @param[out] value Oldest entry in queue.
    * @return False if shutdown is requested.
    */
-  bool PopBlocking(QueueType* value) {
+  bool PopBlocking(QueueType* value) 
+  {
     CHECK_NOTNULL(value);
-    while (!shutdown_) {
+    while (!shutdown_) 
+	{
       pthread_mutex_lock(&mutex_);
-      if (queue_.empty()) {
+      if (queue_.empty()) 
+	  {
         pthread_cond_wait(&condition_empty_, &mutex_);
       }
-      if (queue_.empty()) {
+      if (queue_.empty()) 
+	  {
         pthread_mutex_unlock(&mutex_);
         continue;
       }
@@ -335,8 +353,8 @@ class ThreadSafeQueue {
   mutable pthread_mutex_t mutex_;           ///< The queue mutex.
   mutable pthread_cond_t condition_empty_;  ///< Condition variable to wait and signal that queue is not empty.
   mutable pthread_cond_t condition_full_;   ///< Condition variable to wait and signal when an element is popped.
-  std::queue<QueueType> queue_;             ///< Actual queue.
-  std::atomic_bool shutdown_;               ///< Flag if shutdown is requested.
+  std::queue<QueueType> queue_;             ///< Actual queue. 双向队列，可以高效的在头尾两端插入和删除元素，deque在接口上和vector非常相似。
+  std::atomic_bool shutdown_;               ///< Flag if shutdown is requested.允许多线程共享访问这个变量
 
 };
 

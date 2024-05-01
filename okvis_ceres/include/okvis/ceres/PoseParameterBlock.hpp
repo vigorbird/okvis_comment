@@ -49,6 +49,7 @@ namespace okvis {
 namespace ceres{
 
 /// \brief Wraps the parameter block for a pose estimate
+//ParameterBlockSized这个完全是作者自己定义的
 class PoseParameterBlock : public ParameterBlockSized<7,6,okvis::kinematics::Transformation>{
 public:
 

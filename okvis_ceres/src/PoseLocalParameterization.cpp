@@ -46,19 +46,22 @@ namespace okvis {
 /// \brief ceres Namespace for ceres-related functionality implemented in okvis.
 namespace ceres {
 
-// Generalization of the addition operation,
-//        x_plus_delta = Plus(x, delta)
-//        with the condition that Plus(x, 0) = x.
-bool PoseLocalParameterization::Plus(const double* x, const double* delta,
-                                     double* x_plus_delta) const {
+
+/// \brief Generalization of the addition operation,
+ ///		x_plus_delta = Plus(x, delta)
+ ///		with the condition that Plus(x, 0) = x.
+ /// @param[in] x Variable.
+ /// @param[in] delta Perturbation.
+ /// @param[out] x_plus_delta Perturbed x.
+bool PoseLocalParameterization::Plus(const double* x, const double* delta, double* x_plus_delta) const {
   return plus(x, delta, x_plus_delta);
 }
 
 // Generalization of the addition operation,
 //        x_plus_delta = Plus(x, delta)
 //        with the condition that Plus(x, 0) = x.
-bool PoseLocalParameterization::plus(const double* x, const double* delta,
-                                     double* x_plus_delta) {
+bool PoseLocalParameterization::plus(const double* x, const double* delta,double* x_plus_delta) 
+{
 
   Eigen::Map<const Eigen::Matrix<double, 6, 1> > delta_(delta);
 
@@ -87,6 +90,7 @@ bool PoseLocalParameterization::plus(const double* x, const double* delta,
 }
 
 // Computes the minimal difference between a variable x and a perturbed variable x_plus_delta.
+//delta是计算得到的值
 bool PoseLocalParameterization::Minus(const double* x,
                                       const double* x_plus_delta,
                                       double* delta) const {
@@ -100,6 +104,7 @@ bool PoseLocalParameterization::ComputeLiftJacobian(const double* x,
 }
 
 // Computes the minimal difference between a variable x and a perturbed variable x_plus_delta.
+//计算两个状态相差多少
 bool PoseLocalParameterization::minus(const double* x,
                                       const double* x_plus_delta,
                                       double* delta) {
@@ -116,26 +121,26 @@ bool PoseLocalParameterization::minus(const double* x,
 }
 
 // The jacobian of Plus(x, delta) w.r.t delta at delta = 0.
-bool PoseLocalParameterization::plusJacobian(const double* x,
-                                             double* jacobian) {
+//为了计算jacobian，x输入的是t+四元数
+bool PoseLocalParameterization::plusJacobian(const double* x, double* jacobian) 
+{
   Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor> > Jp(jacobian);
-  okvis::kinematics::Transformation T(
-      Eigen::Vector3d(x[0], x[1], x[2]),
-      Eigen::Quaterniond(x[6], x[3], x[4], x[5]));
+  okvis::kinematics::Transformation T( Eigen::Vector3d(x[0], x[1], x[2]),Eigen::Quaterniond(x[6], x[3], x[4], x[5]));
   T.oplusJacobian(Jp);
 
   return true;
 }
 
 // Computes the Jacobian from minimal space to naively overparameterised space as used by ceres.
-bool PoseLocalParameterization::liftJacobian(const double* x,
-                                             double* jacobian) {
+//详见算法实现文档
+bool PoseLocalParameterization::liftJacobian(const double* x,double* jacobian) 
+{
 
   Eigen::Map<Eigen::Matrix<double, 6, 7, Eigen::RowMajor> > J_lift(jacobian);
   const Eigen::Quaterniond q_inv(x[6], -x[3], -x[4], -x[5]);
   J_lift.setZero();
   J_lift.topLeftCorner<3, 3>().setIdentity();
-  Eigen::Matrix4d Qplus = okvis::kinematics::oplus(q_inv);
+  Eigen::Matrix4d Qplus = okvis::kinematics::oplus(q_inv);//搜索 Eigen::Matrix4d oplus
   Eigen::Matrix<double, 3, 4> Jq_pinv;
   Jq_pinv.bottomRightCorner<3, 1>().setZero();
   Jq_pinv.topLeftCorner<3, 3>() = Eigen::Matrix3d::Identity() * 2.0;
@@ -252,6 +257,7 @@ bool PoseLocalParameterization3d::plusJacobian(const double* x,
 }
 
 // Computes the Jacobian from minimal space to naively overparameterised space as used by ceres.
+//
 bool PoseLocalParameterization3d::liftJacobian(const double* x,
                                                double* jacobian) {
   Eigen::Map<Eigen::Matrix<double, 3, 7, Eigen::RowMajor> > J_lift(jacobian);

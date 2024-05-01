@@ -92,20 +92,20 @@ class ThreadedKFVio : public VioInterface {
   OKVIS_DEFINE_EXCEPTION(Exception, std::runtime_error)
 
 #ifdef DEACTIVATE_TIMERS
-  typedef okvis::timing::DummyTimer TimerSwitchable;
+  typedef okvis::timing::DummyTimer TimerSwitchable;//默认是这个构造变量 表示不使用定时器
 #else
   typedef okvis::timing::Timer TimerSwitchable;
 #endif
 
-#ifdef USE_MOCK
 
+
+#ifdef USE_MOCK
   /// \brief constructor for gmock
   ThreadedKFVio(okvis::VioParameters& parameters, okvis::MockVioBackendInterface& estimator,
       okvis::MockVioFrontendInterface& frontend);
-
 #else
   /**
-   * \brief Constructor.
+   * \brief Constructor.默认是这个构造函数!!!!!!!!!!!!!!!!!!!!!!
    * \param parameters Parameters and settings.
    */
   ThreadedKFVio(okvis::VioParameters& parameters);
@@ -300,7 +300,7 @@ class ThreadedKFVio : public VioInterface {
     /// The relative transformation of the cameras to the sensor (IMU) frame
     std::vector<okvis::kinematics::Transformation,
         Eigen::aligned_allocator<okvis::kinematics::Transformation> > vector_of_T_SCi;
-    okvis::MapPointVector landmarksVector;      ///< Vector containing the current landmarks.
+    okvis::MapPointVector landmarksVector;      ///< Vector containing the current landmarks.元素=地图点
     okvis::MapPointVector transferredLandmarks; ///< Vector of the landmarks that have been marginalized out.
     bool onlyPublishLandmarks;                  ///< Boolean to signalise the publisherLoop() that only the landmarks should be published
   };
@@ -321,7 +321,7 @@ class ThreadedKFVio : public VioInterface {
   okvis::kinematics::Transformation lastOptimized_T_WS_;
   /// \brief Resulting speeds and IMU biases after last optimization.
   /// \warning Lock lastState_mutex_.
-  okvis::SpeedAndBias lastOptimizedSpeedAndBiases_;
+  okvis::SpeedAndBias lastOptimizedSpeedAndBiases_;//是一个9*1的向量
   /// \brief Timestamp of newest frame used in the last optimization.
   /// \warning Lock lastState_mutex_.
   okvis::Time lastOptimizedStateTimestamp_;
@@ -337,19 +337,18 @@ class ThreadedKFVio : public VioInterface {
   okvis::FrameSynchronizer frameSynchronizer_;
 
   okvis::Time lastAddedStateTimestamp_; ///< Timestamp of the newest state in the Estimator.
-  okvis::Time lastAddedImageTimestamp_; ///< Timestamp of the newest image added to the image input queue.
+  okvis::Time lastAddedImageTimestamp_; ///< Timestamp of the newest image added to the image input queue. 上次加入图像队列中最近的那个时间戳，分左右相机
 
 
   /// @name Measurement input queues
   /// @{
 
   /// Camera measurement input queues. For each camera in the configuration one.
-  std::vector<std::shared_ptr<
-      okvis::threadsafe::ThreadSafeQueue<std::shared_ptr<okvis::CameraMeasurement> > > > cameraMeasurementsReceived_;
-  /// IMU measurement input queue.
+  //用于接收图像的队列,vector分别对应左右两个相机
+  std::vector<std::shared_ptr< okvis::threadsafe::ThreadSafeQueue<std::shared_ptr<okvis::CameraMeasurement> > > > cameraMeasurementsReceived_;
+  /// IMU measurement input queue.用于接收imu测量值的imu队列
   okvis::threadsafe::ThreadSafeQueue<okvis::ImuMeasurement> imuMeasurementsReceived_;
-
-  /// Position measurement input queue.
+  /// Position measurement input queue.用于接收位置信息的位置队列-这个其实作者没有用到(我认为应该是为了使用gps组合定位的时候用到的)
   okvis::threadsafe::ThreadSafeQueue<okvis::PositionMeasurement> positionMeasurementsReceived_;
 
   /// @}
@@ -357,17 +356,22 @@ class ThreadedKFVio : public VioInterface {
   /// @{
 
   /// The queue containing multiframes with completely detected frames.
+  //特征点队列 这个变量只在frameConsumerLoop线程中被更新了,这个队列中存储的数据是已经提取过特征点的双目结构
+  //在matchingLoop队列中被使用了
   okvis::threadsafe::ThreadSafeQueue<std::shared_ptr<okvis::MultiFrame> > keypointMeasurements_;
   /// The queue containing multiframes with completely matched frames. These are already part of the estimator state.
+  //匹配队列，这个参数只在matchingLoop线程中被更新，只在optimizationLoop线程中被使用
   okvis::threadsafe::ThreadSafeQueue<std::shared_ptr<okvis::MultiFrame>> matchedFrames_;
+
+  
   /// \brief The IMU measurements.
   /// \warning Lock with imuMeasurements_mutex_.
-  okvis::ImuMeasurementDeque imuMeasurements_;
+  okvis::ImuMeasurementDeque imuMeasurements_;//存储的是imu的测量值，只在imuConsumerLoop线程中被增加值
   /// \brief The Position measurements.
   /// \warning Lock with positionMeasurements_mutex_.
-  okvis::PositionMeasurementDeque positionMeasurements_;
+  okvis::PositionMeasurementDeque positionMeasurements_;//位置测量值队列
   /// The queue containing the results of the optimization or IMU propagation ready for publishing.
-  okvis::threadsafe::ThreadSafeQueue<OptimizationResults> optimizationResults_;
+  okvis::threadsafe::ThreadSafeQueue<OptimizationResults> optimizationResults_;//优化队列
   /// The queue containing visualization data that is ready to be displayed.
   okvis::threadsafe::ThreadSafeQueue<VioVisualizer::VisualizationData::Ptr> visualizationData_;
   /// The queue containing the actual display images
@@ -392,7 +396,7 @@ class ThreadedKFVio : public VioInterface {
   /// @}
 
   /// Threads running the frameConsumerLoop(). One per camera.
-  std::vector<std::thread> frameConsumerThreads_;
+  std::vector<std::thread> frameConsumerThreads_;//处理相机线程，线程也可以被当做变量这样搞
   std::vector<std::thread> keypointConsumerThreads_;  ///< Threads running matchingLoop().
   std::vector<std::thread> matchesConsumerThreads_;   ///< Unused.
   std::thread imuConsumerThread_;           ///< Thread running imuConsumerLoop().
@@ -416,14 +420,14 @@ class ThreadedKFVio : public VioInterface {
 #ifdef USE_MOCK
   okvis::MockVioBackendInterface& estimator_;
   okvis::MockVioFrontendInterface& frontend_;
-#else
+#else  //默认进入这个条件
   okvis::Estimator estimator_;    ///< The backend estimator.
   okvis::Frontend frontend_;      ///< The frontend.
 #endif
 
   /// @}
 
-  size_t numCameras_;     ///< Number of cameras in the system.
+  size_t numCameras_;     ///< Number of cameras in the system.是单目还是双目
   size_t numCameraPairs_; ///< Number of camera pairs in the system.
 
   okvis::VioParameters parameters_; ///< The parameters and settings.

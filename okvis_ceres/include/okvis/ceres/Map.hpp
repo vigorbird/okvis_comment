@@ -69,33 +69,35 @@ class Map {
 
   // definitions
   /// @brief Struct to store some infos about a residual.
-  struct ResidualBlockSpec {
-    ResidualBlockSpec()
-        : residualBlockId(0),
-          lossFunctionPtr(0),
-          errorInterfacePtr(std::shared_ptr<ErrorInterface>()) {
-    }
+  //保存的都是残差的相关信息=残差在ceres中的id+lossfunction指针+误差函数指针
+  struct ResidualBlockSpec 
+  {
+	    ResidualBlockSpec()
+	        : residualBlockId(0),
+	          lossFunctionPtr(0),
+	          errorInterfacePtr(std::shared_ptr<ErrorInterface>()) {
+	    }
 
-    /// @brief Constructor
-    /// @param[in] residualBlockId ID of residual block.
-    /// @param[in] lossFunctionPtr The m-estimator.
-    /// @param[in] errorInterfacePtr The pointer to the error interface of the respective residual block.
-    ResidualBlockSpec(::ceres::ResidualBlockId residualBlockId,
-                      ::ceres::LossFunction* lossFunctionPtr,
-                      std::shared_ptr<ErrorInterface> errorInterfacePtr)
-        : residualBlockId(residualBlockId),
-          lossFunctionPtr(lossFunctionPtr),
-          errorInterfacePtr(errorInterfacePtr) {
-    }
+	    /// @brief Constructor
+	    /// @param[in] residualBlockId ID of residual block.
+	    /// @param[in] lossFunctionPtr The m-estimator.
+	    /// @param[in] errorInterfacePtr The pointer to the error interface of the respective residual block.
+	    ResidualBlockSpec(::ceres::ResidualBlockId residualBlockId,
+	                      ::ceres::LossFunction* lossFunctionPtr,
+	                      std::shared_ptr<ErrorInterface> errorInterfacePtr)
+	        : residualBlockId(residualBlockId),
+	          lossFunctionPtr(lossFunctionPtr),
+	          errorInterfacePtr(errorInterfacePtr) {
+	    }
 
-    ::ceres::ResidualBlockId residualBlockId;           ///< ID of residual block.
-    ::ceres::LossFunction* lossFunctionPtr;             ///< The m-estimator.
-    std::shared_ptr<ErrorInterface> errorInterfacePtr;  ///< The pointer to the error interface of the respective residual block.
+	    ::ceres::ResidualBlockId residualBlockId;           ///< ID of residual block. 这个是ceres类型的变量
+	    ::ceres::LossFunction* lossFunctionPtr;             ///< The m-estimator.这个是ceres类型的变量
+	    std::shared_ptr<ErrorInterface> errorInterfacePtr;  ///< The pointer to the error interface of the respective residual block.
   };
-  typedef std::pair<uint64_t, std::shared_ptr<okvis::ceres::ParameterBlock> > ParameterBlockSpec;
+  typedef std::pair<uint64_t, std::shared_ptr<okvis::ceres::ParameterBlock> > ParameterBlockSpec;//存储的是参数块id+参数块指针
 
-  typedef std::vector<ResidualBlockSpec> ResidualBlockCollection;
-  typedef std::vector<ParameterBlockSpec> ParameterBlockCollection;
+  typedef std::vector<ResidualBlockSpec> ResidualBlockCollection;//元素 = 残差的信息=残差在ceres中的id+loss function函数指针+误差函数指针
+  typedef std::vector<ParameterBlockSpec> ParameterBlockCollection;//元素 = (参数块id,参数块指针构成)
 
   /// @brief The Parameterisation enum
   enum Parameterization {
@@ -143,9 +145,7 @@ class Map {
    * @param group             Schur elimination group -- currently unused.
    * @return True if successful.
    */
-  bool addParameterBlock(
-      std::shared_ptr<okvis::ceres::ParameterBlock> parameterBlock,
-      int parameterization = Parameterization::Trivial, const int group = -1);
+  bool addParameterBlock( std::shared_ptr<okvis::ceres::ParameterBlock> parameterBlock, int parameterization = Parameterization::Trivial, const int group = -1);
 
   /**
    * @brief Remove a parameter block from the map.
@@ -327,8 +327,7 @@ class Map {
   /// @brief Get the parameters of a residual block.
   /// @param[in] residualBlockId The ID of the residual block in question.
   /// @return Infos about all the parameter blocks connected.
-  ParameterBlockCollection parameters(
-      ::ceres::ResidualBlockId residualBlockId) const;  // get the parameter blocks connected
+  ParameterBlockCollection parameters(::ceres::ResidualBlockId residualBlockId) const;  // get the parameter blocks connected
 
   /// @}
 
@@ -345,10 +344,10 @@ class Map {
 
   // access to the map as such
   /// \brief The actual map from Id to parameter block pointer.
-  typedef std::unordered_map<uint64_t,
-      std::shared_ptr<okvis::ceres::ParameterBlock> > Id2ParameterBlock_Map;
+  typedef std::unordered_map<uint64_t, std::shared_ptr<okvis::ceres::ParameterBlock> > Id2ParameterBlock_Map;
 
   /// \brief The actual map from Id to residual block specs.
+  //ResidualBlockSpec的定义在这个文件的前面
   typedef std::unordered_map< ::ceres::ResidualBlockId, ResidualBlockSpec> ResidualBlockId2ResidualBlockSpec_Map;
 
   /// @brief Get map connecting parameter block IDs to parameter blocks
@@ -369,7 +368,7 @@ class Map {
 
   /// @brief Solve the optimization problem.
   void solve() {
-    Solve(options, problem_.get(), &summary);
+    Solve(options, problem_.get(), &summary);//整个代码中就这里调用了ceres的solve函数
   }
 
  protected:
@@ -383,22 +382,30 @@ class Map {
 
   // the actual maps
   /// \brief Go from Id to residual block pointer.
+  //ResidualBlockSpec类型定义见这个文件的上面
   typedef std::unordered_multimap<uint64_t, ResidualBlockSpec> Id2ResidualBlock_Multimap;
 
   /// \brief Go from residual block id to its parameter blocks.
-  typedef std::unordered_map< ::ceres::ResidualBlockId,
-      ParameterBlockCollection> ResidualBlockId2ParameterBlockCollection_Map;
+  typedef std::unordered_map< ::ceres::ResidualBlockId,ParameterBlockCollection> ResidualBlockId2ParameterBlockCollection_Map;
 
   /// \brief The map connecting parameter block ID's and parameter blocks
+  //定义   typedef std::unordered_map<uint64_t, std::shared_ptr<okvis::ceres::ParameterBlock> > Id2ParameterBlock_Map;
+  //元素 = (参数块id(=地图点的id),参数块指针)
   Id2ParameterBlock_Map id2ParameterBlock_Map_;
 
   /// \brief Go from residual ID to specs.
+  // 元素 = (残差在ceres中的id，残差在ceres中的id+loss function函数指针+误差函数指针)
+  //存储的就是纯残差块的信息
   ResidualBlockId2ResidualBlockSpec_Map residualBlockId2ResidualBlockSpec_Map_;
 
   /// \brief Go from Id to residual block pointer.
+  //元素 = （数据块的id，与该数据块有关的残差=残差在ceres中的id+loss function函数指针+误差函数指针）
+  //存储的是 某一数据块相关联的多个残差块
   Id2ResidualBlock_Multimap id2ResidualBlock_Multimap_;
 
   /// \brief Go from residual block id to its parameter blocks.
+  //元素 = （残差在ceres中的id，与该残差有关系的数据块的集合=参数块id+参数块指针构成）
+  //存储的是 某一残差块相关联的多个参数块指针
   ResidualBlockId2ParameterBlockCollection_Map residualBlockId2ParameterBlockCollection_Map_;
 
   /// \brief Store parameterisation locally.

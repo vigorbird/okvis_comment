@@ -107,24 +107,23 @@ class ThreadPool
 
 // Enqueue work for the thread pool.
 template<class Function, class ... Args>
-std::future<typename std::result_of<Function(Args...)>::type> ThreadPool::enqueue(
-    Function&& function, Args&&... args)
+std::future<typename std::result_of<Function(Args...)>::type> ThreadPool::enqueue(Function&& function, Args&&... args)
 {
   typedef typename std::result_of<Function(Args...)>::type return_type;
   // Don't allow enqueueing after stopping the pool.
-  if (stop_) {
+  if (stop_) 
+  {
     LOG(ERROR)<< "enqueue() called on stopped ThreadPool";
     // An empty future will return valid() == false.
     return std::future<typename std::result_of<Function(Args...)>::type>();
   }
 
-  auto task = std::make_shared<std::packaged_task<return_type()>>(
-      std::bind(std::forward<Function>(function), std::forward<Args>(args)...));
+  auto task = std::make_shared<std::packaged_task<return_type()>>(std::bind(std::forward<Function>(function), std::forward<Args>(args)...));
 
   std::future<return_type> res = task->get_future();
   {
     std::unique_lock<std::mutex> lock(tasks_mutex_);
-    tasks_.push([task]() {(*task)();});
+    tasks_.push([task]() {(*task)();});//std::queue<std::function<void()>> tasks_;
   }
   tasks_condition_.notify_one();
   return res;

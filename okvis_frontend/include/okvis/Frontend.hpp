@@ -281,17 +281,17 @@ class Frontend : public VioFrontendInterface {
   /// @name BRISK detection parameters
   /// @{
 
-  size_t briskDetectionOctaves_;            ///< The set number of brisk octaves.
-  double briskDetectionThreshold_;          ///< The set BRISK detection threshold.
-  double briskDetectionAbsoluteThreshold_;  ///< The set BRISK absolute detection threshold.
-  size_t briskDetectionMaximumKeypoints_;   ///< The set maximum number of keypoints.
+  size_t briskDetectionOctaves_;            ///< The set number of brisk octaves. eroc设置是 0
+  double briskDetectionThreshold_;          ///< The set BRISK detection threshold. euroc 设置是40
+  double briskDetectionAbsoluteThreshold_;  ///< The set BRISK absolute detection threshold. 默认值是800
+  size_t briskDetectionMaximumKeypoints_;   ///< The set maximum number of keypoints.euroc设置是400
 
   /// @}
   /// @name BRISK descriptor extractor parameters
   /// @{
 
-  bool briskDescriptionRotationInvariance_; ///< The set rotation invariance setting.
-  bool briskDescriptionScaleInvariance_;    ///< The set scale invariance setting.
+  bool briskDescriptionRotationInvariance_; ///< The set rotation invariance setting. 默认设置是true
+  bool briskDescriptionScaleInvariance_;    ///< The set scale invariance setting.默认设置是false
 
   ///@}
   /// @name BRISK matching parameters

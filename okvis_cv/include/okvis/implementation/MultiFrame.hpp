@@ -243,7 +243,7 @@ size_t MultiFrame::numKeypoints(size_t cameraIdx) const
 {
   OKVIS_ASSERT_TRUE_DBG(Exception, cameraIdx < frames_.size(), "Out of range");
   return frames_[cameraIdx].numKeypoints();
-}
+} 
 
 // provide keypoints externally
 bool MultiFrame::resetKeypoints(size_t cameraIdx, const std::vector<cv::KeyPoint> & keypoints){

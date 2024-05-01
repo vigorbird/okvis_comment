@@ -88,6 +88,7 @@ struct Measurement {
   }
 };
 
+
 /// \brief IMU measurements. For now assume they are synchronized:
 struct ImuSensorReadings {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -184,8 +185,7 @@ typedef Measurement<FrameData> FrameMeasurement;
 typedef Measurement<DepthCameraData> DepthCameraMeasurement;
 
 typedef Measurement<PositionReading> PositionMeasurement;
-typedef std::deque<PositionMeasurement,
-    Eigen::aligned_allocator<PositionMeasurement> > PositionMeasurementDeque;
+typedef std::deque<PositionMeasurement,Eigen::aligned_allocator<PositionMeasurement> > PositionMeasurementDeque;
 
 typedef Measurement<GpsPositionReading> GpsPositionMeasurement;
 typedef std::deque<GpsPositionMeasurement,

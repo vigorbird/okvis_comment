@@ -62,6 +62,7 @@ namespace okvis {
 namespace ceres {
 
 // not sized, in order to be flexible.
+//这个类其实是一个ceres的误差函数
 class MarginalizationError : public ::ceres::CostFunction, public ErrorInterface
 {
  public:
@@ -335,6 +336,8 @@ class MarginalizationError : public ::ceres::CostFunction, public ErrorInterface
           isLandmark(false)
     {
     }
+	//ParameterBlockInfo构造函数
+	//输入的参数分别是参数块id，参数块指针，这个参数块在H矩阵中的位置，是否为地图点
     ParameterBlockInfo(uint64_t parameterBlockId,
                        std::shared_ptr<ParameterBlock> parameterBlockPtr,
                        size_t orderingIdx, bool isLandmark)
@@ -345,20 +348,21 @@ class MarginalizationError : public ::ceres::CostFunction, public ErrorInterface
     {
       dimension = parameterBlockPtr->dimension();
       minimalDimension = parameterBlockPtr->minimalDimension();
-      if (parameterBlockPtr->localParameterizationPtr()) {
-        localDimension = parameterBlockPtr->localParameterizationPtr()
-            ->LocalSize();
+      if (parameterBlockPtr->localParameterizationPtr())
+	  {
+        localDimension = parameterBlockPtr->localParameterizationPtr()->LocalSize();
       } else {
         localDimension = minimalDimension;
       }
-      if (parameterBlockPtr->fixed()) {
+      if (parameterBlockPtr->fixed()) 
+	  {
         minimalDimension = 0;
         localDimension = 0;
-		  }
+	  }
       linearizationPoint.reset(new double[dimension],
                                std::default_delete<double[]>());
-      memcpy(linearizationPoint.get(), parameterBlockPtr->parameters(),
-             dimension * sizeof(double));
+	  //注意这里给参数赋初值了
+      memcpy(linearizationPoint.get(), parameterBlockPtr->parameters(),dimension * sizeof(double));
     }
 
     /// \brief Reset the linearisation point. Use with caution.
@@ -371,8 +375,8 @@ class MarginalizationError : public ::ceres::CostFunction, public ErrorInterface
     }
   };
 
-  std::vector<ParameterBlockInfo> parameterBlockInfos_;  ///< Book keeper.
-  std::map<uint64_t, size_t> parameterBlockId2parameterBlockInfoIdx_;  ///< Maps parameter block Ids to index in _parameterBlockInfos
+  std::vector<ParameterBlockInfo> parameterBlockInfos_;  ///< Book keeper.序号是容器中的位置对应的是下面这个参数的第二个元素，内容是各个参数块的信息
+  std::map<uint64_t, size_t> parameterBlockId2parameterBlockInfoIdx_;  ///< Maps parameter block Ids to index in _parameterBlockInfos元素= [参数块id,在容器中的位置]
   size_t denseIndices_;  ///< Keep track of the size of the dense part of the equation system
 
   /// @}

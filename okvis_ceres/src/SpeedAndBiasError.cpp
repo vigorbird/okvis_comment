@@ -44,8 +44,7 @@ namespace okvis {
 namespace ceres {
 
 // Construct with measurement and information matrix
-SpeedAndBiasError::SpeedAndBiasError(const okvis::SpeedAndBias & measurement,
-                                     const information_t & information) {
+SpeedAndBiasError::SpeedAndBiasError(const okvis::SpeedAndBias & measurement, const information_t & information) {
   setMeasurement(measurement);
   setInformation(information);
 }
@@ -79,8 +78,9 @@ void SpeedAndBiasError::setInformation(const information_t & information) {
 }
 
 // This evaluates the error term and additionally computes the Jacobians.
-bool SpeedAndBiasError::Evaluate(double const* const * parameters,
-                                 double* residuals, double** jacobians) const {
+//雅克比解析解 jacobian analytic
+bool SpeedAndBiasError::Evaluate(double const* const * parameters,double* residuals, double** jacobians) const 
+{
   return EvaluateWithMinimalJacobians(parameters, residuals, jacobians, NULL);
 }
 
@@ -101,8 +101,7 @@ bool SpeedAndBiasError::EvaluateWithMinimalJacobians(
   // compute Jacobian - this is rather trivial in this case...
   if (jacobians != NULL) {
     if (jacobians[0] != NULL) {
-      Eigen::Map<Eigen::Matrix<double, 9, 9, Eigen::RowMajor> > J0(
-          jacobians[0]);
+      Eigen::Map<Eigen::Matrix<double, 9, 9, Eigen::RowMajor> > J0(jacobians[0]);
       J0 = -squareRootInformation_ * Eigen::Matrix<double, 9, 9>::Identity();
     }
   }

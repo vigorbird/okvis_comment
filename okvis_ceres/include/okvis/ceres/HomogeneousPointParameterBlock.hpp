@@ -49,8 +49,7 @@ namespace okvis {
 namespace ceres {
 
 /// \brief Wraps the parameter block for a speed / IMU biases estimate
-class HomogeneousPointParameterBlock : public ParameterBlockSized<4, 3,
-    Eigen::Vector4d>
+class HomogeneousPointParameterBlock : public ParameterBlockSized<4, 3,Eigen::Vector4d>
 {
  public:
 

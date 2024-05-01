@@ -66,6 +66,14 @@ void DenseMatcher::matchSlow(MatchingAlgorithm & matchingAlgorithm)
 }
 
 // A recursive function that reassigns weak matches, if a stronger match is found for a particular point
+/**
+   * @brief A recursive function that reassigns weak matches, if a stronger match is found for a particular point
+   * @param[in] myIndexScored The keypoint index that was scored with other keypoints.
+   * @param[inout] vPairsWithScore The distances to other keypoints that a single thread calculated.
+   * @param[inout] aiBestList The best matches so far.
+   * @param locks The mutexes.
+   * @param startidx Start the assigning at some index. Used for the recursion. Set to 0.
+   */
 void DenseMatcher::assignbest(int indexToAssignFromListA,
                               pairing_list_t& vPairsWithScore,
                               std::vector<std::vector<pairing_t> >& aiBestList,

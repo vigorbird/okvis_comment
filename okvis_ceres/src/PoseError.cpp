@@ -76,6 +76,7 @@ void PoseError::setInformation(const information_t & information) {
 }
 
 // This evaluates the error term and additionally computes the Jacobians.
+//雅克比解析解 jacobian analytic
 bool PoseError::Evaluate(double const* const * parameters, double* residuals,
                          double** jacobians) const {
   return EvaluateWithMinimalJacobians(parameters, residuals, jacobians, NULL);
@@ -83,21 +84,22 @@ bool PoseError::Evaluate(double const* const * parameters, double* residuals,
 
 // This evaluates the error term and additionally computes
 // the Jacobians in the minimal internal representation.
+//详见算法实现文档
+//只有第一个参数parameters是输入参数=t+四元数
 bool PoseError::EvaluateWithMinimalJacobians(double const* const * parameters,
                                              double* residuals,
                                              double** jacobians,
-                                             double** jacobiansMinimal) const {
+                                             double** jacobiansMinimal) const 
+{
 
   // compute error
-  okvis::kinematics::Transformation T_WS(
-      Eigen::Vector3d(parameters[0][0], parameters[0][1], parameters[0][2]),
-      Eigen::Quaterniond(parameters[0][6], parameters[0][3], parameters[0][4],
-                         parameters[0][5]));
+  okvis::kinematics::Transformation T_WS( Eigen::Vector3d(parameters[0][0], parameters[0][1], parameters[0][2]),
+      									  Eigen::Quaterniond(parameters[0][6], parameters[0][3], parameters[0][4],parameters[0][5]));
   // delta pose
   okvis::kinematics::Transformation dp = measurement_ * T_WS.inverse();
   // get the error
   Eigen::Matrix<double, 6, 1> error;
-  const Eigen::Vector3d dtheta = 2 * dp.q().coeffs().head<3>();
+  const Eigen::Vector3d dtheta = 2 * dp.q().coeffs().head<3>();//x y z
   error.head<3>() = measurement_.r() - T_WS.r();
   error.tail<3>() = dtheta;
 
@@ -106,16 +108,16 @@ bool PoseError::EvaluateWithMinimalJacobians(double const* const * parameters,
   weighted_error = squareRootInformation_ * error;
 
   // compute Jacobian...
-  if (jacobians != NULL) {
-    if (jacobians[0] != NULL) {
-      Eigen::Map<Eigen::Matrix<double, 6, 7, Eigen::RowMajor> > J0(
-          jacobians[0]);
+  if (jacobians != NULL)
+  {
+    if (jacobians[0] != NULL) 
+	{
+      Eigen::Map<Eigen::Matrix<double, 6, 7, Eigen::RowMajor> > J0(jacobians[0]);
       Eigen::Matrix<double, 6, 6, Eigen::RowMajor> J0_minimal;
       J0_minimal.setIdentity();
       J0_minimal *= -1.0;
-      J0_minimal.block<3, 3>(3, 3) = -okvis::kinematics::plus(dp.q())
-          .topLeftCorner<3, 3>();
-      J0_minimal = (squareRootInformation_ * J0_minimal).eval();
+      J0_minimal.block<3, 3>(3, 3) = -okvis::kinematics::plus(dp.q()).topLeftCorner<3, 3>();
+      J0_minimal = (squareRootInformation_ * J0_minimal).eval();//eval为了解决混淆
 
       // pseudo inverse of the local parametrization Jacobian:
       Eigen::Matrix<double, 6, 7, Eigen::RowMajor> J_lift;
@@ -124,10 +126,11 @@ bool PoseError::EvaluateWithMinimalJacobians(double const* const * parameters,
       // hallucinate Jacobian w.r.t. state
       J0 = J0_minimal * J_lift;
 
-      if (jacobiansMinimal != NULL) {
-        if (jacobiansMinimal[0] != NULL) {
-          Eigen::Map<Eigen::Matrix<double, 6, 6, Eigen::RowMajor> > J0_minimal_mapped(
-              jacobiansMinimal[0]);
+      if (jacobiansMinimal != NULL) 
+	  {
+        if (jacobiansMinimal[0] != NULL) 
+		{
+          Eigen::Map<Eigen::Matrix<double, 6, 6, Eigen::RowMajor> > J0_minimal_mapped(jacobiansMinimal[0]);
           J0_minimal_mapped = J0_minimal;
         }
       }

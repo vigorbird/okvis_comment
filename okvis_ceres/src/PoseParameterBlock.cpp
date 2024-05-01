@@ -54,9 +54,8 @@ PoseParameterBlock::~PoseParameterBlock() {
 }
 
 // Constructor with estimate and time.
-PoseParameterBlock::PoseParameterBlock(
-    const okvis::kinematics::Transformation& T_WS, uint64_t id,
-    const okvis::Time& timestamp) {
+PoseParameterBlock::PoseParameterBlock( const okvis::kinematics::Transformation& T_WS, uint64_t id, const okvis::Time& timestamp) 
+{
   setEstimate(T_WS);
   setId(id);
   setTimestamp(timestamp);
@@ -65,10 +64,10 @@ PoseParameterBlock::PoseParameterBlock(
 
 // setters
 // Set estimate of this parameter block.
-void PoseParameterBlock::setEstimate(
-    const okvis::kinematics::Transformation& T_WS) {
+void PoseParameterBlock::setEstimate(const okvis::kinematics::Transformation& T_WS) 
+{
   const Eigen::Vector3d r = T_WS.r();
-  const Eigen::Vector4d q = T_WS.q().coeffs();
+  const Eigen::Vector4d q = T_WS.q().coeffs();//Ë³Ñ­ÊÇx y z w
   parameters_[0] = r[0];
   parameters_[1] = r[1];
   parameters_[2] = r[2];

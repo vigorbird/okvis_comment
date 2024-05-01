@@ -158,8 +158,7 @@ const cv::Mat NCameraSystem::overlap(size_t cameraIndexSeenBy,
 }
 
 // Can the first camera see parts of the FOV of the second camera?
-bool NCameraSystem::hasOverlap(size_t cameraIndexSeenBy,
-                                      size_t cameraIndex) const
+bool NCameraSystem::hasOverlap(size_t cameraIndexSeenBy,size_t cameraIndex) const
 {
   OKVIS_ASSERT_TRUE_DBG(
       Exception, cameraIndexSeenBy < T_SC_.size(),

@@ -122,7 +122,8 @@ class FrameRotationOnlySacProblem : public RotationOnlySacProblem {
   virtual void getSelectedDistancesToModel(const model_t & model,
                                            const std::vector<int> & indices,
                                            std::vector<double> & scores) const {
-    for (size_t i = 0; i < indices.size(); i++) {
+    for (size_t i = 0; i < indices.size(); i++) 
+	{
       bearingVector_t f1 = adapterDerived_.getBearingVector1(indices[i]);
       bearingVector_t f2 = adapterDerived_.getBearingVector2(indices[i]);
 
@@ -136,10 +137,7 @@ class FrameRotationOnlySacProblem : public RotationOnlySacProblem {
       point_t error2 = (f1_unrotated - f2);
       double error_squared1 = error1.transpose() * error1;
       double error_squared2 = error2.transpose() * error2;
-      scores.push_back(
-          error_squared1 * 0.5 / adapterDerived_.getSigmaAngle1(indices[i])
-              + error_squared2 * 0.5
-                  / adapterDerived_.getSigmaAngle2(indices[i]));
+      scores.push_back( error_squared1 * 0.5 / adapterDerived_.getSigmaAngle1(indices[i]) + error_squared2 * 0.5/adapterDerived_.getSigmaAngle2(indices[i]));
     }
   }
 

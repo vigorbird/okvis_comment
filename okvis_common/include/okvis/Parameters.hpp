@@ -107,15 +107,15 @@ struct ImuParameters{
   okvis::kinematics::Transformation T_BS; ///< Transformation from Body frame to IMU (sensor frame S).
   double a_max;  ///< Accelerometer saturation. [m/s^2]
   double g_max;  ///< Gyroscope saturation. [rad/s]
-  double sigma_g_c;  ///< Gyroscope noise density.
+  double sigma_g_c;  ///< Gyroscope noise density.角速度白噪声
   double sigma_bg;  ///< Initial gyroscope bias.
-  double sigma_a_c;  ///< Accelerometer noise density.
+  double sigma_a_c;  ///< Accelerometer noise density.加速度白噪声
   double sigma_ba;  ///< Initial accelerometer bias
-  double sigma_gw_c; ///< Gyroscope drift noise density.
+  double sigma_gw_c; ///< Gyroscope drift noise density.角速度bias白噪声
   double sigma_aw_c; ///< Accelerometer drift noise density.
   double tau;  ///< Reversion time constant of accerometer bias. [s]
-  double g;  ///< Earth acceleration.
-  Eigen::Vector3d a0;  ///< Mean of the prior accelerometer bias.
+  double g;  ///< Earth acceleration. euroc设置是9.81007
+  Eigen::Vector3d a0;  ///< Mean of the prior accelerometer bias. euroc 设置是0 0 0
   int rate;  ///< IMU rate in Hz.
 };
 

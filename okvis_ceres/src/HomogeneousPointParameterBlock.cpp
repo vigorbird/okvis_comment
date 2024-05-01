@@ -55,7 +55,8 @@ HomogeneousPointParameterBlock::~HomogeneousPointParameterBlock() {
 
 // Constructor with estimate and time.
 HomogeneousPointParameterBlock::HomogeneousPointParameterBlock(
-    const Eigen::Vector4d& point, uint64_t id, bool initialized) {
+    const Eigen::Vector4d& point, uint64_t id, bool initialized) 
+{
   setEstimate(point);
   setId(id);
   setInitialized(initialized);
@@ -73,7 +74,8 @@ HomogeneousPointParameterBlock::HomogeneousPointParameterBlock(
 
 // setters
 // Set estimate of this parameter block.
-void HomogeneousPointParameterBlock::setEstimate(const Eigen::Vector4d& point) {
+void HomogeneousPointParameterBlock::setEstimate(const Eigen::Vector4d& point) 
+{
   // hack: only do "Euclidean" points for now...
   for (int i = 0; i < base_t::Dimension; ++i)
     parameters_[i] = point[i];

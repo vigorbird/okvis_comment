@@ -62,7 +62,9 @@ opengv::absolute_pose::FrameNoncentralAbsoluteAdapter::FrameNoncentralAbsoluteAd
                             "mixed frame types are not supported yet");
   }
 
-  for (size_t im = 0; im < numCameras; ++im) {
+  //遍历左右相机
+  for (size_t im = 0; im < numCameras; ++im) 
+  {
 
     // store transformation. note: the T_SC estimates might actually slightly differ,
     // but we ignore this here.
@@ -72,14 +74,16 @@ opengv::absolute_pose::FrameNoncentralAbsoluteAdapter::FrameNoncentralAbsoluteAd
     // iterate through all the keypoints
     const size_t numK = frame->numKeypoints(im);
     int noCorrespondences = 0;
-    for (size_t k = 0; k < numK; ++k) {
-      uint64_t lmId = frame->landmarkId(im, k);
+	//遍历图像的特征点
+    for (size_t k = 0; k < numK; ++k) 
+	{
+      uint64_t lmId = frame->landmarkId(im, k);//图像上的特征点对应的地图点id
 
       // check if in the map and good enough
       if (lmId == 0 || !estimator.isLandmarkAdded(lmId))
         continue;
       okvis::MapPoint landmark;
-      estimator.getLandmark(lmId, landmark);
+      estimator.getLandmark(lmId, landmark);//根据地图点id得到地图点landmark
       if (landmark.observations.size() < 2)
         continue;
 
@@ -98,21 +102,17 @@ opengv::absolute_pose::FrameNoncentralAbsoluteAdapter::FrameNoncentralAbsoluteAd
       Eigen::Vector2d keypoint;
       frame->getKeypoint(im, k, keypoint);
       double keypointStdDev;
-      frame->getKeypointSize(im, k, keypointStdDev);
+      frame->getKeypointSize(im, k, keypointStdDev);//得到这个特征点的邻域直径
       keypointStdDev = 0.8 * keypointStdDev / 12.0;
       double fu = 1.0;
-      switch (distortionType) {
-        case okvis::cameras::NCameraSystem::RadialTangential: {
-          frame
-              ->geometryAs<
-                  okvis::cameras::PinholeCamera<
-                      okvis::cameras::RadialTangentialDistortion> >(im)
-              ->backProject(keypoint, &bearing);
-          fu = frame
-              ->geometryAs<
-                  okvis::cameras::PinholeCamera<
-                      okvis::cameras::RadialTangentialDistortion> >(im)
-              ->focalLengthU();
+      switch (distortionType) 
+	  {
+        case okvis::cameras::NCameraSystem::RadialTangential: //默认进入这条件
+		{
+		   //搜索bool PinholeCamera<DISTORTION_T>::backProject(
+		   //根据图像中的特征点得到没有畸变的归一化平面的坐标
+          frame->geometryAs<okvis::cameras::PinholeCamera<okvis::cameras::RadialTangentialDistortion> >(im)->backProject(keypoint, &bearing);
+          fu = frame->geometryAs<okvis::cameras::PinholeCamera<okvis::cameras::RadialTangentialDistortion> >(im)->focalLengthU();
           break;
         }
         case okvis::cameras::NCameraSystem::RadialTangential8: {
@@ -157,7 +157,7 @@ opengv::absolute_pose::FrameNoncentralAbsoluteAdapter::FrameNoncentralAbsoluteAd
       // store keypoint index
       keypointIndices_.push_back(k);
 
-    }
+    }//遍历图像的特征点结束
   }
 }
 

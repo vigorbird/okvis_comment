@@ -59,7 +59,8 @@ namespace timing {
   }
   
   // Static functions to query the timers:
-  size_t Timing::getHandle(std::string const & tag) {
+  size_t Timing::getHandle(std::string const & tag) 
+  {
     // Search for an existing tag.
     map_t::iterator i = instance().m_tagMap.find(tag);
     if (i == instance().m_tagMap.end()) {
@@ -104,9 +105,7 @@ namespace timing {
       start();
   }
   
-  Timer::Timer(std::string const & tag, bool constructStopped) :
-    m_timing(false),
-    m_handle(Timing::getHandle(tag))
+  Timer::Timer(std::string const & tag, bool constructStopped) : m_timing(false),m_handle(Timing::getHandle(tag))
   {
     if(!constructStopped)
       start();
@@ -117,7 +116,8 @@ namespace timing {
       stop();
   }
   
-  void Timer::start(){
+  void Timer::start()
+  {
     OKVIS_ASSERT_TRUE(TimerException,!m_timing,"The timer " + Timing::getTag(m_handle) + " is already running");
     m_timing = true;
 #ifdef OKVIS_USE_HIGH_PERF_TIMER

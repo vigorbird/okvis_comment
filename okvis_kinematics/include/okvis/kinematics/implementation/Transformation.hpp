@@ -56,6 +56,7 @@ __inline__ double sinc(double x) {
   }
 }
 
+//根据输入的轴角得到四元数
 __inline__ Eigen::Quaterniond deltaQ(const Eigen::Vector3d& dAlpha)
 {
   Eigen::Vector4d dq;
@@ -66,7 +67,9 @@ __inline__ Eigen::Quaterniond deltaQ(const Eigen::Vector3d& dAlpha)
 }
 
 // Right Jacobian, see Forster et al. RSS 2015 eqn. (8)
-__inline__ Eigen::Matrix3d rightJacobian(const Eigen::Vector3d & PhiVec) {
+//对应的是SO3 Jr函数
+__inline__ Eigen::Matrix3d rightJacobian(const Eigen::Vector3d & PhiVec) 
+{
   const double Phi = PhiVec.norm();
   Eigen::Matrix3d retMat = Eigen::Matrix3d::Identity();
   const Eigen::Matrix3d Phi_x = okvis::kinematics::crossMx(PhiVec);
@@ -242,18 +245,19 @@ inline void Transformation::updateC() {
 }
 
 // apply small update:
+
 template<typename Derived_delta>
-inline bool Transformation::oplus(
-    const Eigen::MatrixBase<Derived_delta> & delta) {
+inline bool Transformation::oplus(const Eigen::MatrixBase<Derived_delta> & delta) 
+{
   EIGEN_STATIC_ASSERT_VECTOR_SPECIFIC_SIZE(Derived_delta, 6);
   r_ += delta.template head<3>();
   Eigen::Vector4d dq;
   double halfnorm = 0.5 * delta.template tail<3>().norm();
   dq.template head<3>() = sinc(halfnorm) * 0.5 * delta.template tail<3>();
   dq[3] = cos(halfnorm);
-  q_ = (Eigen::Quaterniond(dq) * q_);
+  q_ = (Eigen::Quaterniond(dq) * q_);//注意这里作者使用的是左乘更新 这个和okvis中定义的相同
   q_.normalize();
-  updateC();
+  updateC();//根据四元数得到旋转矩阵
   return true;
 }
 
@@ -269,19 +273,18 @@ inline bool Transformation::oplus(
   return oplusJacobian(jacobian);
 }
 
+//为了计算jacobian
 template<typename Derived_jacobian>
-inline bool Transformation::oplusJacobian(
-    const Eigen::MatrixBase<Derived_jacobian> & jacobian) const {
+inline bool Transformation::oplusJacobian(const Eigen::MatrixBase<Derived_jacobian> & jacobian) const
+{
   EIGEN_STATIC_ASSERT_MATRIX_SPECIFIC_SIZE(Derived_jacobian, 7, 6);
   Eigen::Matrix<double, 4, 3> S = Eigen::Matrix<double, 4, 3>::Zero();
   const_cast<Eigen::MatrixBase<Derived_jacobian>&>(jacobian).setZero();
-  const_cast<Eigen::MatrixBase<Derived_jacobian>&>(jacobian)
-      .template topLeftCorner<3, 3>().setIdentity();
+  const_cast<Eigen::MatrixBase<Derived_jacobian>&>(jacobian).template topLeftCorner<3, 3>().setIdentity();
   S(0, 0) = 0.5;
   S(1, 1) = 0.5;
   S(2, 2) = 0.5;
-  const_cast<Eigen::MatrixBase<Derived_jacobian>&>(jacobian)
-      .template bottomRightCorner<4, 3>() = okvis::kinematics::oplus(q_) * S;
+  const_cast<Eigen::MatrixBase<Derived_jacobian>&>(jacobian).template bottomRightCorner<4, 3>() = okvis::kinematics::oplus(q_) * S;
   return true;
 }
 

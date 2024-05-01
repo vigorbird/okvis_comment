@@ -129,15 +129,16 @@ class VioKeyframeWindowMatchingAlgorithm : public okvis::MatchingAlgorithm {
    * @return Distance between the two keypoint descriptors.
    * @remark Points that absolutely don't match will return float::max.
    */
-  virtual float distance(size_t indexA, size_t indexB) const {
+  virtual float distance(size_t indexA, size_t indexB) const 
+ {
     OKVIS_ASSERT_LT_DBG(MatchingAlgorithm::Exception, indexA, sizeA(), "index A out of bounds");
     OKVIS_ASSERT_LT_DBG(MatchingAlgorithm::Exception, indexB, sizeB(), "index B out of bounds");
-    const float dist = static_cast<float>(specificDescriptorDistance(
-        frameA_->keypointDescriptor(camIdA_, indexA),
-        frameB_->keypointDescriptor(camIdB_, indexB)));
+	//specificDescriptorDistance调用了brisk自带的计算描述子距离的函数
+    const float dist = static_cast<float>(specificDescriptorDistance( frameA_->keypointDescriptor(camIdA_, indexA),  frameB_->keypointDescriptor(camIdB_, indexB)));
 
-    if (dist < distanceThreshold_) {
-      if (verifyMatch(indexA, indexB))
+    if (dist < distanceThreshold_) 
+	{
+      if (verifyMatch(indexA, indexB))//是一个重要的函数!!!!!!!!!!!!!!!!!!判定匹配的特征点是否有效
         return dist;
     }
     return std::numeric_limits<float>::max();
@@ -173,21 +174,23 @@ class VioKeyframeWindowMatchingAlgorithm : public okvis::MatchingAlgorithm {
 
   /// \name Which frames to take
   /// \{
-  uint64_t mfIdA_ = 0;
-  uint64_t mfIdB_ = 0;
-  size_t camIdA_ = 0;
-  size_t camIdB_ = 0;
+  uint64_t mfIdA_ = 0;//双目帧A的id
+  uint64_t mfIdB_ = 0;//双目帧B的id  
+  size_t camIdA_ = 0;//双目帧A的左相机还是右相机进行匹配
+  size_t camIdB_ = 0;//双目帧B的左相机还是右相机进行匹配
 
   std::shared_ptr<okvis::MultiFrame> frameA_;
   std::shared_ptr<okvis::MultiFrame> frameB_;
   /// \}
 
   /// Distances above this threshold will not be returned as matches.
+  //匹配的阈值
   float distanceThreshold_;
 
   /// \name Store some transformations that are often used
   /// \{
   /// use a fully relative formulation
+  //存储的是要匹配的两帧图像的姿态信息
   okvis::kinematics::Transformation T_CaCb_;
   okvis::kinematics::Transformation T_CbCa_;
   okvis::kinematics::Transformation T_SaCa_;
@@ -213,12 +216,12 @@ class VioKeyframeWindowMatchingAlgorithm : public okvis::MatchingAlgorithm {
   double fB_ = 0;
 
   /// Stored the matching type. See MatchingTypes().
-  int matchingType_;
+  int matchingType_;//表示这次匹配是2d-3d匹配还是2d-2d匹配
 
   /// temporarily store all projections
-  Eigen::Matrix<double, Eigen::Dynamic, 2> projectionsIntoB_;
+  Eigen::Matrix<double, Eigen::Dynamic, 2> projectionsIntoB_;//一行是一个测量值
   /// temporarily store all projection uncertainties
-  Eigen::Matrix<double, Eigen::Dynamic, 2> projectionsIntoBUncertainties_;
+  Eigen::Matrix<double, Eigen::Dynamic, 2> projectionsIntoBUncertainties_;//以2*2矩阵为单位，存储的是投影过程的雅克比
 
   /// Should keypoint[index] in frame A be skipped
   std::vector<bool> skipA_;
@@ -243,10 +246,8 @@ class VioKeyframeWindowMatchingAlgorithm : public okvis::MatchingAlgorithm {
 
   /// \brief Calculates the distance between two descriptors.
   // copy from BriskDescriptor.hpp
-  uint32_t specificDescriptorDistance(
-      const unsigned char * descriptorA,
-      const unsigned char * descriptorB) const {
-    OKVIS_ASSERT_TRUE_DBG(
+  uint32_t specificDescriptorDistance( const unsigned char * descriptorA,const unsigned char * descriptorB) const 
+  {    OKVIS_ASSERT_TRUE_DBG(
         Exception, descriptorA != NULL && descriptorB != NULL,
         "Trying to compare a descriptor with a null description vector");
 

@@ -73,6 +73,9 @@ ImuError::ImuError(const okvis::ImuMeasurementDeque & imuMeasurements,
 }
 
 // Propagates pose, speeds and biases with given IMU measurements.
+//这个函数和propagation函数很像，但是区别的是，不更新状态也不计算雅克比
+//而是更新了参考bias，和更新了协方差矩阵information_(会被用到imu误差函数中)
+//同时也更新了imuerror误差函数计算雅克比时需要的一些变量
 int ImuError::redoPreintegration(const okvis::kinematics::Transformation& /*T_WS*/,
                                  const okvis::SpeedAndBias & speedAndBiases) const {
 
@@ -175,8 +178,7 @@ int ImuError::redoPreintegration(const okvis::kinematics::Transformation& /*T_WS
     // actual propagation
     // orientation:
     Eigen::Quaterniond dq;
-    const Eigen::Vector3d omega_S_true = (0.5 * (omega_S_0 + omega_S_1)
-        - speedAndBiases.segment < 3 > (3));
+    const Eigen::Vector3d omega_S_true = (0.5 * (omega_S_0 + omega_S_1)- speedAndBiases.segment < 3 > (3));
     const double theta_half = omega_S_true.norm() * 0.5 * dt;
     const double sinc_theta_half = ode::sinc(theta_half);
     const double cos_theta_half = cos(theta_half);
@@ -186,42 +188,31 @@ int ImuError::redoPreintegration(const okvis::kinematics::Transformation& /*T_WS
     // rotation matrix integral:
     const Eigen::Matrix3d C = Delta_q_.toRotationMatrix();
     const Eigen::Matrix3d C_1 = Delta_q_1.toRotationMatrix();
-    const Eigen::Vector3d acc_S_true = (0.5 * (acc_S_0 + acc_S_1)
-        - speedAndBiases.segment < 3 > (6));
+    const Eigen::Vector3d acc_S_true = (0.5 * (acc_S_0 + acc_S_1) - speedAndBiases.segment < 3 > (6));
     const Eigen::Matrix3d C_integral_1 = C_integral_ + 0.5 * (C + C_1) * dt;
     const Eigen::Vector3d acc_integral_1 = acc_integral_
         + 0.5 * (C + C_1) * acc_S_true * dt;
     // rotation matrix double integral:
     C_doubleintegral_ += C_integral_ * dt + 0.25 * (C + C_1) * dt * dt;
-    acc_doubleintegral_ += acc_integral_ * dt
-        + 0.25 * (C + C_1) * acc_S_true * dt * dt;
+    acc_doubleintegral_ += acc_integral_ * dt + 0.25 * (C + C_1) * acc_S_true * dt * dt;
 
     // Jacobian parts
     dalpha_db_g_ += C_1 * okvis::kinematics::rightJacobian(omega_S_true * dt) * dt;
-    const Eigen::Matrix3d cross_1 = dq.inverse().toRotationMatrix() * cross_
-        + okvis::kinematics::rightJacobian(omega_S_true * dt) * dt;
+    const Eigen::Matrix3d cross_1 = dq.inverse().toRotationMatrix() * cross_+ okvis::kinematics::rightJacobian(omega_S_true * dt) * dt;
     const Eigen::Matrix3d acc_S_x = okvis::kinematics::crossMx(acc_S_true);
-    Eigen::Matrix3d dv_db_g_1 = dv_db_g_
-        + 0.5 * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
-    dp_db_g_ += dt * dv_db_g_
-        + 0.25 * dt * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
+    Eigen::Matrix3d dv_db_g_1 = dv_db_g_+ 0.5 * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
+    dp_db_g_ += dt * dv_db_g_ + 0.25 * dt * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
 
     // covariance propagation
-    Eigen::Matrix<double, 15, 15> F_delta =
-        Eigen::Matrix<double, 15, 15>::Identity();
+    Eigen::Matrix<double, 15, 15> F_delta = Eigen::Matrix<double, 15, 15>::Identity();
     // transform
-    F_delta.block<3, 3>(0, 3) = -okvis::kinematics::crossMx(
-        acc_integral_ * dt + 0.25 * (C + C_1) * acc_S_true * dt * dt);
+    F_delta.block<3, 3>(0, 3) = -okvis::kinematics::crossMx(  acc_integral_ * dt + 0.25 * (C + C_1) * acc_S_true * dt * dt);
     F_delta.block<3, 3>(0, 6) = Eigen::Matrix3d::Identity() * dt;
-    F_delta.block<3, 3>(0, 9) = dt * dv_db_g_
-        + 0.25 * dt * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
-    F_delta.block<3, 3>(0, 12) = -C_integral_ * dt
-        + 0.25 * (C + C_1) * dt * dt;
+    F_delta.block<3, 3>(0, 9) = dt * dv_db_g_ + 0.25 * dt * dt * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
+    F_delta.block<3, 3>(0, 12) = -C_integral_ * dt+ 0.25 * (C + C_1) * dt * dt;
     F_delta.block<3, 3>(3, 9) = -dt * C_1;
-    F_delta.block<3, 3>(6, 3) = -okvis::kinematics::crossMx(
-        0.5 * (C + C_1) * acc_S_true * dt);
-    F_delta.block<3, 3>(6, 9) = 0.5 * dt
-        * (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
+    F_delta.block<3, 3>(6, 3) = -okvis::kinematics::crossMx(0.5 * (C + C_1) * acc_S_true * dt);
+    F_delta.block<3, 3>(6, 9) = 0.5 * dt* (C * acc_S_x * cross_ + C_1 * acc_S_x * cross_1);
     F_delta.block<3, 3>(6, 12) = -0.5 * (C + C_1) * dt;
     P_delta_ = F_delta * P_delta_ * F_delta.transpose();
     // add noise. Note that transformations with rotation matrices can be ignored, since the noise is isotropic.
@@ -261,14 +252,14 @@ int ImuError::redoPreintegration(const okvis::kinematics::Transformation& /*T_WS
     if (nexttime == t1_)
       break;
 
-  }
+  }//for循环结束 imu测量值轮询结束结束
 
   // store the reference (linearisation) point
-  speedAndBiases_ref_ = speedAndBiases;
+  speedAndBiases_ref_ = speedAndBiases;//非常重要!!!!!!!!!!!!!!!!!!!!!!!!!!!!!imupropagation函数没有做的事情
 
   // get the weighting:
   // enforce symmetric
-  P_delta_ = 0.5 * P_delta_ + 0.5 * P_delta_.transpose().eval();
+  P_delta_ = 0.5 * P_delta_ + 0.5 * P_delta_.transpose().eval();//非常重要!!!!!!!!!!!!!!!!!!!!!!!!!!!!!imupropagation函数没有做的事情
 
   // calculate inverse
   information_ = P_delta_.inverse();
@@ -284,13 +275,30 @@ int ImuError::redoPreintegration(const okvis::kinematics::Transformation& /*T_WS
 }
 
 // Propagates pose, speeds and biases with given IMU measurements.
+/**
+   * @brief Propagates pose, speeds and biases with given IMU measurements.
+   * @remark This can be used externally to perform propagation
+   * @param[in] imuMeasurements All the IMU measurements.
+   * @param[in] imuParams The parameters to be used.
+   * @param[inout] T_WS Start pose.
+   * @param[inout] speedAndBiases Start speed and biases.
+   * @param[in] t_start Start time.
+   * @param[in] t_end End time.
+   * @param[out] covariance Covariance for GIVEN start states.
+   * @param[out] jacobian Jacobian w.r.t. start states.
+   * @return Number of integration steps.
+   */
+//输入的变量依次为 imu测量值，imu参数，上一时刻相机位姿T_WS(同时也是输出值)，上一时刻的速度和bias，上一帧图像的时间戳，当前帧图像的时间戳
+//协方差和雅克比是输出值，T_WS和speedAndBiases(只更新速度)也是输出参数,表示是这一时刻的机器人位姿。
+//详见算法实现文档
 int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
                           const okvis::ImuParameters & imuParams,
                           okvis::kinematics::Transformation& T_WS,
                           okvis::SpeedAndBias & speedAndBiases,
                           const okvis::Time & t_start,
                           const okvis::Time & t_end, covariance_t* covariance,
-                          jacobian_t* jacobian) {
+                          jacobian_t* jacobian) 
+{
 
   // now the propagation
   okvis::Time time = t_start;
@@ -302,7 +310,7 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
     return -1;  // nothing to do...
 
   // initial condition
-  Eigen::Vector3d r_0 = T_WS.r();
+  Eigen::Vector3d r_0 = T_WS.r();//根据imu测量值得到的k+1时刻的相机初始姿态
   Eigen::Quaterniond q_WS_0 = T_WS.q();
   Eigen::Matrix3d C_WS_0 = T_WS.C();
 
@@ -324,16 +332,18 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
   // the Jacobian of the increment (w/o biases)
   Eigen::Matrix<double,15,15> P_delta = Eigen::Matrix<double,15,15>::Zero();
 
-  double Delta_t = 0;
+  double Delta_t = 0;//记录时间累计值
   bool hasStarted = false;
   int i = 0;
-  for (okvis::ImuMeasurementDeque::const_iterator it = imuMeasurements.begin();
-        it != imuMeasurements.end(); ++it) {
+  //遍历imu测量值
+  for (okvis::ImuMeasurementDeque::const_iterator it = imuMeasurements.begin();it != imuMeasurements.end(); ++it) 
+  {
 
-    Eigen::Vector3d omega_S_0 = it->measurement.gyroscopes;
-    Eigen::Vector3d acc_S_0 = it->measurement.accelerometers;
-    Eigen::Vector3d omega_S_1 = (it + 1)->measurement.gyroscopes;
-    Eigen::Vector3d acc_S_1 = (it + 1)->measurement.accelerometers;
+    Eigen::Vector3d omega_S_0 = it->measurement.gyroscopes;//i时刻的imu角速度
+    Eigen::Vector3d acc_S_0 = it->measurement.accelerometers;//i时刻的imu加速度
+	
+    Eigen::Vector3d omega_S_1 = (it + 1)->measurement.gyroscopes;//i+1时刻的imu角速度
+    Eigen::Vector3d acc_S_1 = (it + 1)->measurement.accelerometers;//i+1时刻的imu加速度
 
     // time delta
     okvis::Time nexttime;
@@ -341,10 +351,12 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
       nexttime = t_end;
     } else
       nexttime = (it + 1)->timeStamp;
-    double dt = (nexttime - time).toSec();
+	
+    double dt = (nexttime - time).toSec();//imu两个测量值之间的时间差
 
 
-    if (end < nexttime) {
+    if (end < nexttime) 
+	{
       double interval = (nexttime - it->timeStamp).toSec();
       nexttime = t_end;
       dt = (nexttime - time).toSec();
@@ -353,12 +365,14 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
       acc_S_1 = ((1.0 - r) * acc_S_0 + r * acc_S_1).eval();
     }
 
-    if (dt <= 0.0) {
+    if (dt <= 0.0) 
+	{
       continue;
     }
-    Delta_t += dt;
+    Delta_t += dt;//记录从k时刻到k+1时刻的时间累计值
 
-    if (!hasStarted) {
+    if (!hasStarted) //这个条件只会在第一次的时候进入
+	{
       hasStarted = true;
       const double r = dt / (nexttime - it->timeStamp).toSec();
       omega_S_0 = (r * omega_S_0 + (1.0 - r) * omega_S_1).eval();
@@ -366,42 +380,49 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
     }
 
     // ensure integrity
-    double sigma_g_c = imuParams.sigma_g_c;
-    double sigma_a_c = imuParams.sigma_a_c;
+    double sigma_g_c = imuParams.sigma_g_c;//角速度白噪声方差-由参数得到
+    double sigma_a_c = imuParams.sigma_a_c;//加速度白噪声方差-由参数得到
 
+    //如果测量的角速度太大 超过7.8rad/s 。g_max=7.8 euroc设置
     if (fabs(omega_S_0[0]) > imuParams.g_max
         || fabs(omega_S_0[1]) > imuParams.g_max
         || fabs(omega_S_0[2]) > imuParams.g_max
         || fabs(omega_S_1[0]) > imuParams.g_max
         || fabs(omega_S_1[1]) > imuParams.g_max
-        || fabs(omega_S_1[2]) > imuParams.g_max) {
-      sigma_g_c *= 100;
+        || fabs(omega_S_1[2]) > imuParams.g_max) 
+    {
+      sigma_g_c *= 100;//角速度白噪声乘以100
       LOG(WARNING) << "gyr saturation";
     }
-
-    if (fabs(acc_S_0[0]) > imuParams.a_max || fabs(acc_S_0[1]) > imuParams.a_max
+    //a_max=176m/s^2 euroc设置
+    if (fabs(acc_S_0[0]) > imuParams.a_max 
+		|| fabs(acc_S_0[1]) > imuParams.a_max
         || fabs(acc_S_0[2]) > imuParams.a_max
         || fabs(acc_S_1[0]) > imuParams.a_max
         || fabs(acc_S_1[1]) > imuParams.a_max
-        || fabs(acc_S_1[2]) > imuParams.a_max) {
-      sigma_a_c *= 100;
+        || fabs(acc_S_1[2]) > imuParams.a_max) 
+    {
+      sigma_a_c *= 100;//加速度白噪声乘以100
       LOG(WARNING) << "acc saturation";
     }
 
     // actual propagation
     // orientation:
     Eigen::Quaterniond dq;
-    const Eigen::Vector3d omega_S_true = (0.5*(omega_S_0+omega_S_1) - speedAndBiases.segment<3>(3));
+    const Eigen::Vector3d omega_S_true = (0.5*(omega_S_0+omega_S_1) - speedAndBiases.segment<3>(3));//=i到i+1时间段内的角速度真值
     const double theta_half = omega_S_true.norm() * 0.5 * dt;
-    const double sinc_theta_half = ode::sinc(theta_half);
+	//根据角速度和间隔时间得到对应的四元数增量dq
+    const double sinc_theta_half = ode::sinc(theta_half);//计算四元数的虚部系数
     const double cos_theta_half = cos(theta_half);
     dq.vec() = sinc_theta_half * omega_S_true * 0.5 * dt;
     dq.w() = cos_theta_half;
-    Eigen::Quaterniond Delta_q_1 = Delta_q * dq;
+	
+    Eigen::Quaterniond Delta_q_1 = Delta_q * dq;//从k时刻开始到i+1时刻的四元数增量的累乘
     // rotation matrix integral:
     const Eigen::Matrix3d C = Delta_q.toRotationMatrix();
     const Eigen::Matrix3d C_1 = Delta_q_1.toRotationMatrix();
-    const Eigen::Vector3d acc_S_true = (0.5*(acc_S_0+acc_S_1) - speedAndBiases.segment<3>(6));
+	
+    const Eigen::Vector3d acc_S_true = (0.5*(acc_S_0+acc_S_1) - speedAndBiases.segment<3>(6));//加速度的真值
     const Eigen::Matrix3d C_integral_1 = C_integral + 0.5*(C + C_1)*dt;
     const Eigen::Vector3d acc_integral_1 = acc_integral + 0.5*(C + C_1)*acc_S_true*dt;
     // rotation matrix double integral:
@@ -410,17 +431,17 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
 
     // Jacobian parts
     dalpha_db_g += dt*C_1;
-    const Eigen::Matrix3d cross_1 = dq.inverse().toRotationMatrix()*cross +
-        okvis::kinematics::rightJacobian(omega_S_true*dt)*dt;
-    const Eigen::Matrix3d acc_S_x = okvis::kinematics::crossMx(acc_S_true);
+    const Eigen::Matrix3d cross_1 = dq.inverse().toRotationMatrix()*cross + okvis::kinematics::rightJacobian(omega_S_true*dt)*dt;//rightJacobian对应的是SO3的Jr函数
+    const Eigen::Matrix3d acc_S_x = okvis::kinematics::crossMx(acc_S_true);//acc_S_true反对称矩阵
     Eigen::Matrix3d dv_db_g_1 = dv_db_g + 0.5*dt*(C*acc_S_x*cross + C_1*acc_S_x*cross_1);
     dp_db_g += dt*dv_db_g + 0.25*dt*dt*(C*acc_S_x*cross + C_1*acc_S_x*cross_1);
 
     // covariance propagation
-    if (covariance) {
+    if (covariance) 
+	{
       Eigen::Matrix<double,15,15> F_delta = Eigen::Matrix<double,15,15>::Identity();
-      // transform
-      F_delta.block<3,3>(0,3) = -okvis::kinematics::crossMx(acc_integral*dt + 0.25*(C + C_1)*acc_S_true*dt*dt);
+      // transform F_delta是为了计算P_delta P_delta是为了更新协方差
+      F_delta.block<3,3>(0,3) = -okvis::kinematics::crossMx(acc_integral*dt + 0.25*(C + C_1)*acc_S_true*dt*dt);//反对称矩阵
       F_delta.block<3,3>(0,6) = Eigen::Matrix3d::Identity()*dt;
       F_delta.block<3,3>(0,9) = dt*dv_db_g + 0.25*dt*dt*(C*acc_S_x*cross + C_1*acc_S_x*cross_1);
       F_delta.block<3,3>(0,12) = -C_integral*dt + 0.25*(C + C_1)*dt*dt;
@@ -428,14 +449,16 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
       F_delta.block<3,3>(6,3) = -okvis::kinematics::crossMx(0.5*(C + C_1)*acc_S_true*dt);
       F_delta.block<3,3>(6,9) = 0.5*dt*(C*acc_S_x*cross + C_1*acc_S_x*cross_1);
       F_delta.block<3,3>(6,12) = -0.5*(C + C_1)*dt;
+	  
       P_delta = F_delta*P_delta*F_delta.transpose();
       // add noise. Note that transformations with rotation matrices can be ignored, since the noise is isotropic.
       //F_tot = F_delta*F_tot;
-      const double sigma2_dalpha = dt * sigma_g_c * sigma_g_c;
+      //P是协方差 
+      const double sigma2_dalpha = dt * sigma_g_c * sigma_g_c;//sigma_g_c=角速度白噪声方差-由参数得到
       P_delta(3,3) += sigma2_dalpha;
       P_delta(4,4) += sigma2_dalpha;
       P_delta(5,5) += sigma2_dalpha;
-      const double sigma2_v = dt * sigma_a_c * imuParams.sigma_a_c;
+      const double sigma2_v = dt * sigma_a_c * imuParams.sigma_a_c;//sigma_a_c=加速度白噪声
       P_delta(6,6) += sigma2_v;
       P_delta(7,7) += sigma2_v;
       P_delta(8,8) += sigma2_v;
@@ -466,15 +489,14 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
     if (nexttime == t_end)
       break;
 
-  }
+  }//imu测量值遍历结束
 
   // actual propagation output:
+  //根据imu测量值更新最新时刻的位姿T_WS和速度speedAndBiases
   const Eigen::Vector3d g_W = imuParams.g * Eigen::Vector3d(0, 0, 6371009).normalized();
-  T_WS.set(r_0+speedAndBiases.head<3>()*Delta_t
-             + C_WS_0*(acc_doubleintegral/*-C_doubleintegral*speedAndBiases.segment<3>(6)*/)
-             - 0.5*g_W*Delta_t*Delta_t,
-             q_WS_0*Delta_q);
-  speedAndBiases.head<3>() += C_WS_0*(acc_integral/*-C_integral*speedAndBiases.segment<3>(6)*/)-g_W*Delta_t;
+  T_WS.set(r_0+speedAndBiases.head<3>()*Delta_t+ C_WS_0*(acc_doubleintegral/*-C_doubleintegral*speedAndBiases.segment<3>(6)*/)- 0.5*g_W*Delta_t*Delta_t,
+             q_WS_0*Delta_q);//这里一定注意!!!!这里姿态的更新使用的是右乘
+  speedAndBiases.head<3>() += C_WS_0*(acc_integral/*-C_integral*speedAndBiases.segment<3>(6)*/)-g_W*Delta_t;//更新速度
 
   // assign Jacobian, if requested
   if (jacobian) {
@@ -491,7 +513,8 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
   }
 
   // overall covariance, if requested
-  if (covariance) {
+  if (covariance) 
+  {
     Eigen::Matrix<double,15,15> & P = *covariance;
     // transform from local increments to actual states
     Eigen::Matrix<double,15,15> T = Eigen::Matrix<double,15,15>::Identity();
@@ -501,9 +524,10 @@ int ImuError::propagation(const okvis::ImuMeasurementDeque & imuMeasurements,
     P = T * P_delta * T.transpose();
   }
   return i;
-}
+}//propagation函数结束
 
 // This evaluates the error term and additionally computes the Jacobians.
+//雅克比解析解 jacobian analytic
 bool ImuError::Evaluate(double const* const * parameters, double* residuals,
                         double** jacobians) const {
   return EvaluateWithMinimalJacobians(parameters, residuals, jacobians, NULL);
@@ -519,18 +543,19 @@ bool ImuError::EvaluateWithMinimalJacobians(double const* const * parameters,
   // get poses
   const okvis::kinematics::Transformation T_WS_0(
       Eigen::Vector3d(parameters[0][0], parameters[0][1], parameters[0][2]),
-      Eigen::Quaterniond(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]));
+      Eigen::Quaterniond(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]));//上一时刻的姿态
 
   const okvis::kinematics::Transformation T_WS_1(
       Eigen::Vector3d(parameters[2][0], parameters[2][1], parameters[2][2]),
-      Eigen::Quaterniond(parameters[2][6], parameters[2][3], parameters[2][4], parameters[2][5]));
+      Eigen::Quaterniond(parameters[2][6], parameters[2][3], parameters[2][4], parameters[2][5]));//这一时刻的姿态
 
   // get speed and bias
   okvis::SpeedAndBias speedAndBiases_0;
   okvis::SpeedAndBias speedAndBiases_1;
-  for (size_t i = 0; i < 9; ++i) {
-    speedAndBiases_0[i] = parameters[1][i];
-    speedAndBiases_1[i] = parameters[3][i];
+  for (size_t i = 0; i < 9; ++i) 
+  {
+    speedAndBiases_0[i] = parameters[1][i];//上一时刻的速度和bias
+    speedAndBiases_1[i] = parameters[3][i];//这一时刻的速度和bias
   }
 
   // this will NOT be changed:
@@ -543,12 +568,12 @@ bool ImuError::EvaluateWithMinimalJacobians(double const* const * parameters,
   // ensure unique access
   {
     std::lock_guard<std::mutex> lock(preintegrationMutex_);
-    Delta_b = speedAndBiases_0.tail<6>()
-          - speedAndBiases_ref_.tail<6>();
+    Delta_b = speedAndBiases_0.tail<6>() - speedAndBiases_ref_.tail<6>();
   }
-  redo_ = redo_ || (Delta_b.head<3>().norm() * Delta_t > 0.0001);
-  if (redo_) {
-    redoPreintegration(T_WS_0, speedAndBiases_0);
+  redo_ = redo_ || (Delta_b.head<3>().norm() * Delta_t > 0.0001);//如果需要重积分或者角速度bias变化太大
+  if (redo_) //非常重要判断是否需要进行重积分!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  {
+    redoPreintegration(T_WS_0, speedAndBiases_0);//所有代码中 就只在这里进行了重积分
     redoCounter_++;
     Delta_b.setZero();
     redo_ = false;
@@ -560,37 +585,31 @@ bool ImuError::EvaluateWithMinimalJacobians(double const* const * parameters,
   // actual propagation output:
   {
     std::lock_guard<std::mutex> lock(preintegrationMutex_); // this is a bit stupid, but shared read-locks only come in C++14
-    const Eigen::Vector3d g_W = imuParameters_.g * Eigen::Vector3d(0, 0, 6371009).normalized();
+    //g_w = [0,0,9.8]
+    const Eigen::Vector3d g_W = imuParameters_.g * Eigen::Vector3d(0, 0, 6371009).normalized();//9.81007=g
 
     // assign Jacobian w.r.t. x0
-    Eigen::Matrix<double,15,15> F0 =
-        Eigen::Matrix<double,15,15>::Identity(); // holds for d/db_g, d/db_a
-    const Eigen::Vector3d delta_p_est_W =
-        T_WS_0.r() - T_WS_1.r() + speedAndBiases_0.head<3>()*Delta_t - 0.5*g_W*Delta_t*Delta_t;
-    const Eigen::Vector3d delta_v_est_W =
-        speedAndBiases_0.head<3>() - speedAndBiases_1.head<3>() - g_W*Delta_t;
+    Eigen::Matrix<double,15,15> F0 = Eigen::Matrix<double,15,15>::Identity(); // holds for d/db_g, d/db_a
+    const Eigen::Vector3d delta_p_est_W = T_WS_0.r() - T_WS_1.r() + speedAndBiases_0.head<3>()*Delta_t - 0.5*g_W*Delta_t*Delta_t;
+    const Eigen::Vector3d delta_v_est_W = speedAndBiases_0.head<3>() - speedAndBiases_1.head<3>() - g_W*Delta_t;
+	//这里要注意了dalpha_db_g_和Delta_q_是在redoPreintegration得到的变量
     const Eigen::Quaterniond Dq = okvis::kinematics::deltaQ(-dalpha_db_g_*Delta_b.head<3>())*Delta_q_;
     F0.block<3,3>(0,0) = C_S0_W;
     F0.block<3,3>(0,3) = C_S0_W * okvis::kinematics::crossMx(delta_p_est_W);
     F0.block<3,3>(0,6) = C_S0_W * Eigen::Matrix3d::Identity()*Delta_t;
-    F0.block<3,3>(0,9) = dp_db_g_;
+    F0.block<3,3>(0,9) = dp _db_g_;
     F0.block<3,3>(0,12) = -C_doubleintegral_;
-    F0.block<3,3>(3,3) = (okvis::kinematics::plus(Dq*T_WS_1.q().inverse()) *
-        okvis::kinematics::oplus(T_WS_0.q())).topLeftCorner<3,3>();
-    F0.block<3,3>(3,9) = (okvis::kinematics::oplus(T_WS_1.q().inverse()*T_WS_0.q())*
-        okvis::kinematics::oplus(Dq)).topLeftCorner<3,3>()*(-dalpha_db_g_);
+    F0.block<3,3>(3,3) = (okvis::kinematics::plus(Dq*T_WS_1.q().inverse()) * okvis::kinematics::oplus(T_WS_0.q())).topLeftCorner<3,3>();
+    F0.block<3,3>(3,9) = (okvis::kinematics::oplus(T_WS_1.q().inverse()*T_WS_0.q())*  okvis::kinematics::oplus(Dq)).topLeftCorner<3,3>()*(-dalpha_db_g_);
     F0.block<3,3>(6,3) = C_S0_W * okvis::kinematics::crossMx(delta_v_est_W);
     F0.block<3,3>(6,6) = C_S0_W;
     F0.block<3,3>(6,9) = dv_db_g_;
     F0.block<3,3>(6,12) = -C_integral_;
 
     // assign Jacobian w.r.t. x1
-    Eigen::Matrix<double,15,15> F1 =
-        -Eigen::Matrix<double,15,15>::Identity(); // holds for the biases
+    Eigen::Matrix<double,15,15> F1 =-Eigen::Matrix<double,15,15>::Identity(); // holds for the biases
     F1.block<3,3>(0,0) = -C_S0_W;
-    F1.block<3,3>(3,3) = -(okvis::kinematics::plus(Dq) *
-        okvis::kinematics::oplus(T_WS_0.q()) *
-        okvis::kinematics::plus(T_WS_1.q().inverse())).topLeftCorner<3,3>();
+    F1.block<3,3>(3,3) = -(okvis::kinematics::plus(Dq) * okvis::kinematics::oplus(T_WS_0.q()) * okvis::kinematics::plus(T_WS_1.q().inverse())).topLeftCorner<3,3>();
     F1.block<3,3>(6,6) = -C_S0_W;
 
     // the overall error vector
@@ -604,82 +623,84 @@ bool ImuError::EvaluateWithMinimalJacobians(double const* const * parameters,
     Eigen::Map<Eigen::Matrix<double, 15, 1> > weighted_error(residuals);
     weighted_error = squareRootInformation_ * error;
 
-    // get the Jacobians
-    if (jacobians != NULL) {
-      if (jacobians[0] != NULL) {
+    // get the Jacobians，大的if开始
+    if (jacobians != NULL) 
+	{
+      if (jacobians[0] != NULL) 
+	  {
         // Jacobian w.r.t. minimal perturbance
-        Eigen::Matrix<double, 15, 6> J0_minimal = squareRootInformation_
-            * F0.block<15, 6>(0, 0);
+        Eigen::Matrix<double, 15, 6> J0_minimal = squareRootInformation_* F0.block<15, 6>(0, 0);
 
         // pseudo inverse of the local parametrization Jacobian:
         Eigen::Matrix<double, 6, 7, Eigen::RowMajor> J_lift;
         PoseLocalParameterization::liftJacobian(parameters[0], J_lift.data());
 
         // hallucinate Jacobian w.r.t. state
-        Eigen::Map<Eigen::Matrix<double, 15, 7, Eigen::RowMajor> > J0(
-            jacobians[0]);
+        Eigen::Map<Eigen::Matrix<double, 15, 7, Eigen::RowMajor> > J0(jacobians[0]);
         J0 = J0_minimal * J_lift;
 
         // if requested, provide minimal Jacobians
-        if (jacobiansMinimal != NULL) {
-          if (jacobiansMinimal[0] != NULL) {
-            Eigen::Map<Eigen::Matrix<double, 15, 6, Eigen::RowMajor> > J0_minimal_mapped(
-                jacobiansMinimal[0]);
+        if (jacobiansMinimal != NULL) 
+		{
+          if (jacobiansMinimal[0] != NULL) 
+		  {
+            Eigen::Map<Eigen::Matrix<double, 15, 6, Eigen::RowMajor> > J0_minimal_mapped(jacobiansMinimal[0]);
             J0_minimal_mapped = J0_minimal;
           }
         }
       }
-      if (jacobians[1] != NULL) {
-        Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J1(
-            jacobians[1]);
+      if (jacobians[1] != NULL) 
+	  {
+        Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J1( jacobians[1]);
         J1 = squareRootInformation_ * F0.block<15, 9>(0, 6);
 
         // if requested, provide minimal Jacobians
-        if (jacobiansMinimal != NULL) {
-          if (jacobiansMinimal[1] != NULL) {
-            Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J1_minimal_mapped(
-                jacobiansMinimal[1]);
+        if (jacobiansMinimal != NULL) 
+		{
+          if (jacobiansMinimal[1] != NULL) 
+		  {
+            Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J1_minimal_mapped(jacobiansMinimal[1]);
             J1_minimal_mapped = J1;
           }
         }
       }
       if (jacobians[2] != NULL) {
         // Jacobian w.r.t. minimal perturbance
-        Eigen::Matrix<double, 15, 6> J2_minimal = squareRootInformation_
-                    * F1.block<15, 6>(0, 0);
+        Eigen::Matrix<double, 15, 6> J2_minimal = squareRootInformation_* F1.block<15, 6>(0, 0);
 
         // pseudo inverse of the local parametrization Jacobian:
         Eigen::Matrix<double, 6, 7, Eigen::RowMajor> J_lift;
         PoseLocalParameterization::liftJacobian(parameters[2], J_lift.data());
 
         // hallucinate Jacobian w.r.t. state
-        Eigen::Map<Eigen::Matrix<double, 15, 7, Eigen::RowMajor> > J2(
-            jacobians[2]);
+        Eigen::Map<Eigen::Matrix<double, 15, 7, Eigen::RowMajor> > J2(jacobians[2]);
         J2 = J2_minimal * J_lift;
 
         // if requested, provide minimal Jacobians
         if (jacobiansMinimal != NULL) {
-          if (jacobiansMinimal[2] != NULL) {
-            Eigen::Map<Eigen::Matrix<double, 15, 6, Eigen::RowMajor> > J2_minimal_mapped(
-                jacobiansMinimal[2]);
+          if (jacobiansMinimal[2] != NULL) 
+		  {
+            Eigen::Map<Eigen::Matrix<double, 15, 6, Eigen::RowMajor> > J2_minimal_mapped(jacobiansMinimal[2]);
             J2_minimal_mapped = J2_minimal;
           }
         }
       }
-      if (jacobians[3] != NULL) {
+      if (jacobians[3] != NULL) 
+	  {
         Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J3(jacobians[3]);
         J3 = squareRootInformation_ * F1.block<15, 9>(0, 6);
 
         // if requested, provide minimal Jacobians
-        if (jacobiansMinimal != NULL) {
-          if (jacobiansMinimal[3] != NULL) {
-            Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J3_minimal_mapped(
-                jacobiansMinimal[3]);
+        if (jacobiansMinimal != NULL) 
+		{
+          if (jacobiansMinimal[3] != NULL) 
+		  {
+            Eigen::Map<Eigen::Matrix<double, 15, 9, Eigen::RowMajor> > J3_minimal_mapped(jacobiansMinimal[3]);
             J3_minimal_mapped = J3;
           }
         }
       }
-    }
+    }//大的if结束
   }
   return true;
 }

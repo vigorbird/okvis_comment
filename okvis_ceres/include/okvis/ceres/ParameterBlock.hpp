@@ -145,8 +145,8 @@ class ParameterBlock {
    * @brief Set which local parameterisation object to use.
    * @param localParameterizationPtr The local parameterisation object to use.
    */
-  virtual void setLocalParameterizationPtr(
-      const ::ceres::LocalParameterization* localParameterizationPtr) {
+  virtual void setLocalParameterizationPtr(const ::ceres::LocalParameterization* localParameterizationPtr) 
+  {
     localParameterizationPtr_ = localParameterizationPtr;
   }
   /**

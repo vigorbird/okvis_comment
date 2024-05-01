@@ -138,9 +138,9 @@ class FrameRelativePoseSacProblem : public CentralRelativePoseSacProblem {
     Eigen::Matrix<double, 4, 1> p_hom;
     p_hom[3] = 1.0;
 
-    for (size_t i = 0; i < indices.size(); i++) {
-      p_hom.block<3, 1>(0, 0) = opengv::triangulation::triangulate2(
-          adapterDerived_, indices[i]);
+    for (size_t i = 0; i < indices.size(); i++) 
+	{
+      p_hom.block<3, 1>(0, 0) = opengv::triangulation::triangulate2(adapterDerived_, indices[i]);
       bearingVector_t reprojection1 = p_hom.block<3, 1>(0, 0);
       bearingVector_t reprojection2 = inverseSolution * p_hom;
       reprojection1 = reprojection1 / reprojection1.norm();

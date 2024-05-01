@@ -54,19 +54,24 @@ ImuFrameSynchronizer::~ImuFrameSynchronizer() {
 }
 
 // Tell the synchronizer that a new IMU measurement has been registered.
-void ImuFrameSynchronizer::gotImuData(const okvis::Time& stamp) {
+void ImuFrameSynchronizer::gotImuData(const okvis::Time& stamp) 
+{
   newestImuDataStamp_ = stamp;
   if(imuDataNeededUntil_ < stamp)
     gotNeededImuData_.notify_all();
 }
 
 // Wait until a IMU measurement with a timestamp equal or newer to the supplied one is registered.
-bool ImuFrameSynchronizer::waitForUpToDateImuData(const okvis::Time& frame_stamp) {
+bool ImuFrameSynchronizer::waitForUpToDateImuData(const okvis::Time& frame_stamp) 
+{
   // if the newest imu data timestamp is smaller than frame_stamp, wait until
   // imu_data newer than frame_stamp arrives
-  if(newestImuDataStamp_ <= frame_stamp && !shutdown_) {
+  if(newestImuDataStamp_ <= frame_stamp && !shutdown_) 
+  {
     imuDataNeededUntil_ = frame_stamp;
     std::unique_lock<std::mutex> lock(mutex_);
+	/* 当 std::condition_variable对象的某个wait 函数被调用的时候，它使用 std::unique_lock(通过 std::mutex) 来锁住当前线程。
+	当前线程会一直被阻塞，直到另外一个线程在相同的 std::condition_variable 对象上调用了 notification 函数来唤醒当前线程*/
     gotNeededImuData_.wait(lock);
   }
   if(shutdown_)

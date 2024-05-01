@@ -54,10 +54,8 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
     const okvis::cameras::NCameraSystem & nCameraSystem, uint64_t multiFrameIdA,
     size_t camIdA, uint64_t multiFrameIdB, size_t camIdB) {
 
-  std::shared_ptr<okvis::MultiFrame> frameAPtr = estimator.multiFrame(
-      multiFrameIdA);
-  std::shared_ptr<okvis::MultiFrame> frameBPtr = estimator.multiFrame(
-      multiFrameIdB);
+  std::shared_ptr<okvis::MultiFrame> frameAPtr = estimator.multiFrame( multiFrameIdA);
+  std::shared_ptr<okvis::MultiFrame> frameBPtr = estimator.multiFrame( multiFrameIdB);
 
   // determine type
   okvis::cameras::NCameraSystem::DistortionType distortionTypeA = nCameraSystem.distortionType(camIdA);
@@ -66,12 +64,9 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
   double fu1 = 0;
   size_t numKeypointsA = frameAPtr->numKeypoints(camIdA);
   switch (distortionTypeA) {
-    case okvis::cameras::NCameraSystem::RadialTangential: {
-      fu1 = frameAPtr
-          ->geometryAs<
-              okvis::cameras::PinholeCamera<
-                  okvis::cameras::RadialTangentialDistortion> >(camIdA)
-          ->focalLengthU();
+    case okvis::cameras::NCameraSystem::RadialTangential: //默认进入这个条件
+	{
+      fu1 = frameAPtr->geometryAs<okvis::cameras::PinholeCamera<okvis::cameras::RadialTangentialDistortion> >(camIdA)->focalLengthU();
       break;
     }
     case okvis::cameras::NCameraSystem::Equidistant: {
@@ -98,12 +93,9 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
   double fu2 = 0.0;
   size_t numKeypointsB = frameBPtr->numKeypoints(camIdB);
   switch (distortionTypeB) {
-    case okvis::cameras::NCameraSystem::RadialTangential: {
-      fu2 = frameAPtr
-          ->geometryAs<
-              okvis::cameras::PinholeCamera<
-                  okvis::cameras::RadialTangentialDistortion> >(camIdB)
-          ->focalLengthU();
+    case okvis::cameras::NCameraSystem::RadialTangential: //默认进入这个条件
+	{
+      fu2 = frameAPtr->geometryAs<okvis::cameras::PinholeCamera< okvis::cameras::RadialTangentialDistortion> >(camIdB)->focalLengthU();
       break;
     }
     case okvis::cameras::NCameraSystem::Equidistant: {
@@ -136,7 +128,8 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
 
   matches_.reserve(std::min(numKeypointsA, numKeypointsB));
   std::map<uint64_t, size_t> idMap;
-  for (size_t k = 0; k < numKeypointsB; ++k) {
+  for (size_t k = 0; k < numKeypointsB; ++k) 
+  {
 
     // get landmark id, if set
     uint64_t lmId = frameBPtr->landmarkId(camIdB, k);
@@ -151,7 +144,8 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
     idMap.insert(std::pair<uint64_t, size_t>(lmId, k));
   }
 
-  for (size_t k = 0; k < numKeypointsA; ++k) {
+  for (size_t k = 0; k < numKeypointsA; ++k) 
+  {
     // get landmark id, if set
     uint64_t lmId = frameAPtr->landmarkId(camIdA, k);
     if (lmId == 0)
@@ -165,7 +159,8 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
   }
 
   // precompute
-  for (size_t k = 0; k < matches_.size(); ++k) {
+  for (size_t k = 0; k < matches_.size(); ++k) 
+  {
     const size_t idx1 = matches_[k].idxA;
     const size_t idx2 = matches_[k].idxB;
     Eigen::Vector2d keypoint;
@@ -173,15 +168,12 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
     frameAPtr->getKeypoint(camIdA, idx1, keypoint);
     frameAPtr->getKeypointSize(camIdA, idx1, keypointStdDev);
     keypointStdDev = 0.8 * keypointStdDev / 12.0;
-    sigmaAngles1_[idx1] = sqrt(2) * keypointStdDev * keypointStdDev
-        / (fu1 * fu1);
+    sigmaAngles1_[idx1] = sqrt(2) * keypointStdDev * keypointStdDev/ (fu1 * fu1);
     switch (distortionTypeA) {
-      case okvis::cameras::NCameraSystem::RadialTangential: {
-        frameAPtr
-          ->geometryAs<
-              okvis::cameras::PinholeCamera<
-                  okvis::cameras::RadialTangentialDistortion> >(camIdA)
-          ->backProject(keypoint, &bearingVectors1_[idx1]);
+      case okvis::cameras::NCameraSystem::RadialTangential://默认进入这个条件
+	  {
+	  	//搜索 bool PinholeCamera<DISTORTION_T>::backProject
+        frameAPtr ->geometryAs< okvis::cameras::PinholeCamera< okvis::cameras::RadialTangentialDistortion> >(camIdA)->backProject(keypoint, &bearingVectors1_[idx1]);
         break;
       }
       case okvis::cameras::NCameraSystem::Equidistant: {
@@ -212,12 +204,10 @@ opengv::relative_pose::FrameRelativeAdapter::FrameRelativeAdapter(
     sigmaAngles2_[idx2] = sqrt(2) * keypointStdDev * keypointStdDev
         / (fu2 * fu2);
     switch (distortionTypeB) {
-      case okvis::cameras::NCameraSystem::RadialTangential: {
-        frameAPtr
-            ->geometryAs<
-                okvis::cameras::PinholeCamera<
-                    okvis::cameras::RadialTangentialDistortion> >(camIdB)
-            ->backProject(keypoint, &bearingVectors2_[idx2]);
+      case okvis::cameras::NCameraSystem::RadialTangential: //默认进入这个条件
+	  {
+	  	//搜索 bool PinholeCamera<DISTORTION_T>::backProject
+        frameAPtr->geometryAs<okvis::cameras::PinholeCamera<okvis::cameras::RadialTangentialDistortion> >(camIdB)->backProject(keypoint, &bearingVectors2_[idx2]);
         break;
       }
       case okvis::cameras::NCameraSystem::Equidistant: {

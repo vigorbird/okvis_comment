@@ -51,8 +51,11 @@ namespace okvis {
 namespace ceres {
 
 /// \brief Absolute error of a pose.
+//这个是ceres的误差函数 最重要的函数是Evaluate和EvaluateWithMinimalJacobians,而EvaluateWithMinimalJacobians是用于实现Evaluate函数的
+//其他函数只是进行参数的设置和获取
 class PoseError : public ::ceres::SizedCostFunction<6 /* number of residuals */,
-    7 /* size of first parameter */>, public ErrorInterface {
+    7 /* size of first parameter */>, public ErrorInterface 
+{
  public:
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -135,6 +138,7 @@ class PoseError : public ::ceres::SizedCostFunction<6 /* number of residuals */,
     * @param jacobians Pointer to the Jacobians (see ceres)
     * @return success of th evaluation.
     */
+    //这个函数是从ceres继承下来的函数
   virtual bool Evaluate(double const* const * parameters, double* residuals,
                         double** jacobians) const;
 

@@ -215,7 +215,8 @@ class Estimator : public VioBackendInterface
    * @param landmarkId The ID.
    * @return True if added.
    */
-  bool isLandmarkAdded(uint64_t landmarkId) const {
+  bool isLandmarkAdded(uint64_t landmarkId) const 
+ {
     bool isAdded = landmarksMap_.find(landmarkId) != landmarksMap_.end();
     OKVIS_ASSERT_TRUE_DBG(Exception, isAdded == mapPtr_->parameterBlockExists(landmarkId),
                    "id="<<landmarkId<<" inconsistent. isAdded = " << isAdded);
@@ -299,7 +300,8 @@ class Estimator : public VioBackendInterface
 
   /// @brief Get the number of states/frames in the estimator.
   /// \return The number of frames.
-  size_t numFrames() const {
+  size_t numFrames() const 
+ {
     return statesMap_.size();
   }
 
@@ -400,7 +402,8 @@ class Estimator : public VioBackendInterface
   /// @brief Set whether a frame is a keyframe or not.
   /// @param[in] frameId The frame ID.
   /// @param[in] isKeyframe Whether or not keyrame.
-  void setKeyframe(uint64_t frameId, bool isKeyframe){
+  void setKeyframe(uint64_t frameId, bool isKeyframe)
+  {
     statesMap_.at(frameId).isKeyframe = isKeyframe;
   }
 
@@ -534,7 +537,7 @@ class Estimator : public VioBackendInterface
                                 int stateType, const typename PARAMETER_BLOCK_T::estimate_t & state);
 
   // the following are just fixed-size containers for related parameterBlockIds:
-  typedef std::array<StateInfo, 6> GlobalStatesContainer; ///< Container for global states.
+  typedef <StateInfo, 6> GlobalStatesContainer; ///< Container for global states.可以理解为定义了一个6维数组 数组中元素类型为StateInfo
   typedef std::vector<StateInfo> SpecificSensorStatesContainer;  ///< Container for sensor states. The dimension can vary from sensor to sensor...
   typedef std::array<std::vector<SpecificSensorStatesContainer>, 7> AllSensorStatesContainer; ///< Union of all sensor states.
 
@@ -544,6 +547,7 @@ class Estimator : public VioBackendInterface
     States() : isKeyframe(false), id(0) {}
     States(bool isKeyframe, uint64_t id, okvis::Time timestamp)
       : isKeyframe(isKeyframe), id(id), timestamp(timestamp) {}
+	
     GlobalStatesContainer global;
     AllSensorStatesContainer sensors;
     bool isKeyframe;
@@ -552,29 +556,32 @@ class Estimator : public VioBackendInterface
   };
 
   // the following keeps track of all the states at different time instances (key=poseId)
+  //下面的两个状态只在addStates中插入值
   std::map<uint64_t, States> statesMap_; ///< Buffer for currently considered states.
   std::map<uint64_t, okvis::MultiFramePtr> multiFramePtrMap_; ///< remember all needed okvis::MultiFrame.
+  
   std::shared_ptr<okvis::ceres::Map> mapPtr_; ///< The underlying okvis::Map.
 
   // this is the reference pose
   uint64_t referencePoseId_; ///< The pose ID of the reference (currently not changing)
 
   // the following are updated after the optimization
-  okvis::PointMap landmarksMap_; ///< Contains all the current landmarks (synched after optimisation).
+  //std::map<uint64_t, MapPoint> = PointMap
+  okvis::PointMap landmarksMap_; ///< Contains all the current landmarks (synched after optimisation).存储所有的地图点，元素=(地图点id,地图点数据类型)
   mutable std::mutex statesMutex_;  ///< Regulate access of landmarksMap_.
 
   // parameters
-  std::vector<okvis::ExtrinsicsEstimationParameters,
-      Eigen::aligned_allocator<okvis::ExtrinsicsEstimationParameters> > extrinsicsEstimationParametersVec_; ///< Extrinsics parameters.
-  std::vector<okvis::ImuParameters, Eigen::aligned_allocator<okvis::ImuParameters> > imuParametersVec_; ///< IMU parameters.
+  ///< Extrinsics parameters. 存储的是相机的参数 这个参数就只在Estimator::addCamera函数中被调用过，只有两个元素
+  std::vector<okvis::ExtrinsicsEstimationParameters,Eigen::aligned_allocator<okvis::ExtrinsicsEstimationParameters> > extrinsicsEstimationParametersVec_; 
+  std::vector<okvis::ImuParameters, Eigen::aligned_allocator<okvis::ImuParameters> > imuParametersVec_; ///< IMU parameters. 存储的是imu的参数 只有一个维度
 
   // loss function for reprojection errors
-  std::shared_ptr< ::ceres::LossFunction> cauchyLossFunctionPtr_; ///< Cauchy loss.
+  std::shared_ptr< ::ceres::LossFunction> cauchyLossFunctionPtr_; ///< Cauchy loss.作者这里使用的是这个loss funciton
   std::shared_ptr< ::ceres::LossFunction> huberLossFunctionPtr_; ///< Huber loss.
 
   // the marginalized error term
-  std::shared_ptr<ceres::MarginalizationError> marginalizationErrorPtr_; ///< The marginalisation class
-  ::ceres::ResidualBlockId marginalizationResidualId_; ///< Remembers the marginalisation object's Id
+  std::shared_ptr<ceres::MarginalizationError> marginalizationErrorPtr_; ///< The marginalisation class 对应的是边缘化误差函数
+  ::ceres::ResidualBlockId marginalizationResidualId_; ///< Remembers the marginalisation object's Id 这个是ceres类型的变量 ，边缘化残差块的id
 
   // ceres iteration callback object
   std::unique_ptr<okvis::ceres::CeresIterationCallback> ceresCallback_; ///< Maybe there was a callback registered, store it here.

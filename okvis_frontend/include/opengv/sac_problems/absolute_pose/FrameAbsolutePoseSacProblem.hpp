@@ -139,24 +139,21 @@ class FrameAbsolutePoseSacProblem : public AbsolutePoseSacProblem {
     Eigen::Matrix<double, 4, 1> p_hom;
     p_hom[3] = 1.0;
 
-    for (size_t i = 0; i < indices.size(); i++) {
+    for (size_t i = 0; i < indices.size(); i++) 
+	{
       //get point in homogeneous form
       p_hom.block<3, 1>(0, 0) = adapterDerived_.getPoint(indices[i]);
 
       //compute the reprojection (this is working for both central and
       //non-central case)
       point_t bodyReprojection = inverseSolution * p_hom;
-      point_t reprojection = adapterDerived_.getCamRotation(indices[i])
-          .transpose()
-          * (bodyReprojection - adapterDerived_.getCamOffset(indices[i]));
+      point_t reprojection = adapterDerived_.getCamRotation(indices[i]).transpose()* (bodyReprojection - adapterDerived_.getCamOffset(indices[i]));
       reprojection = reprojection / reprojection.norm();
 
       //compute the score
-      point_t error = (reprojection
-          - adapterDerived_.getBearingVector(indices[i]));
+      point_t error = (reprojection- adapterDerived_.getBearingVector(indices[i]));
       double error_squared = error.transpose() * error;
-      scores.push_back(
-          error_squared / adapterDerived_.getSigmaAngle(indices[i]));
+      scores.push_back( error_squared / adapterDerived_.getSigmaAngle(indices[i]));
     }
   }
 

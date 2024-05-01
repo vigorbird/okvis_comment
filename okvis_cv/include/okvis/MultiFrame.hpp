@@ -265,7 +265,7 @@ class MultiFrame
  protected:
   okvis::Time timestamp_;  ///< the frame timestamp
   uint64_t id_;  ///< the frame id
-  std::vector<Frame, Eigen::aligned_allocator<Frame>> frames_;  ///< the individual frames
+  std::vector<Frame, Eigen::aligned_allocator<Frame>> frames_;  ///< the individual frames 序号是左右还是右目
   cameras::NCameraSystem cameraSystem_;  ///< the camera system
 };
 

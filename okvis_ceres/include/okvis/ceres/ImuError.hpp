@@ -56,6 +56,9 @@ namespace okvis {
 namespace ceres {
 
 /// \brief Implements a nonlinear IMU factor.
+//比较重要的三个函数 prpagation,redoPreintegration和Evaluate(由EvaluateWithMinimalJacobians实现)
+//残差 = 位置+速度+角速度+两个bias
+//状态=上一时刻的状态+这一时刻的状态(t+四元数)
 class ImuError :
     public ::ceres::SizedCostFunction<15 /* number of residuals */,
         7 /* size of first parameter (PoseParameterBlock k) */,

@@ -68,6 +68,7 @@ void HomogeneousPointError::setInformation(const information_t & information) {
 }
 
 // This evaluates the error term and additionally computes the Jacobians.
+//雅克比解析解 jacobian analytic
 bool HomogeneousPointError::Evaluate(double const* const * parameters,
                                      double* residuals,
                                      double** jacobians) const {
@@ -113,10 +114,11 @@ bool HomogeneousPointError::EvaluateWithMinimalJacobians(
       // hallucinate Jacobian w.r.t. state
       J0 = J0_minimal * J_lift;
 
-      if (jacobiansMinimal != NULL) {
-        if (jacobiansMinimal[0] != NULL) {
-          Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor> > J0_minimal_mapped(
-              jacobiansMinimal[0]);
+      if (jacobiansMinimal != NULL) 
+	  {
+        if (jacobiansMinimal[0] != NULL) 
+		{
+          Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor> > J0_minimal_mapped(jacobiansMinimal[0]);
           J0_minimal_mapped = J0_minimal;
         }
       }

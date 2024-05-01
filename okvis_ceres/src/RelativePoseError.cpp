@@ -74,6 +74,7 @@ void RelativePoseError::setInformation(const information_t & information) {
 }
 
 // This evaluates the error term and additionally computes the Jacobians.
+//雅克比解析解 jacobian analytic
 bool RelativePoseError::Evaluate(double const* const * parameters,
                                  double* residuals, double** jacobians) const {
   return EvaluateWithMinimalJacobians(parameters, residuals, jacobians, NULL);

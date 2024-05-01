@@ -72,7 +72,7 @@ class VioInterface {
   typedef std::function<
       void(const okvis::Time &, const okvis::kinematics::Transformation &,
            const Eigen::Matrix<double, 9, 1> &,
-           const Eigen::Matrix<double, 3, 1> &)> FullStateCallback;
+           const Eigen::Matrix<double, 3, 1> &)> FullStateCallback;//函数的输入变量定义
   typedef std::function<
       void(
           const okvis::Time &,
@@ -266,8 +266,7 @@ class VioInterface {
   ///        and T_w_vk is the transformation (and uncertainty) that
   ///        transforms points from the vehicle frame to the world frame. speedAndBiases contain
   ///        speed in world frame followed by gyro and acc biases. finally, omega_S is the rotation speed.
-  virtual void setFullStateCallback(
-      const FullStateCallback & fullStateCallback);
+  virtual void setFullStateCallback(const FullStateCallback & fullStateCallback);
 
   /// \brief Set the fullStateCallbackWithExtrinsics to be called every time a new state is estimated.
   ///        When an implementing class has an estimate, they can call:
@@ -308,16 +307,18 @@ class VioInterface {
   /// \brief Write first line of tracks (data associations) CSV file to describe columns.
   bool writeTracksCsvDescription(size_t cameraId);
 
-  StateCallback stateCallback_; ///< State callback function.
-  FullStateCallback fullStateCallback_; ///< Full state callback function.
-  FullStateCallbackWithExtrinsics fullStateCallbackWithExtrinsics_; ///< Full state and extrinsics callback function.
-  LandmarksCallback landmarksCallback_; ///< Landmarks callback function.
+  //这是四个函数
+  StateCallback stateCallback_; ///< State callback function.这是一个空函数啊没有定义
+  FullStateCallback fullStateCallback_; ///< Full state callback function. 这个函数只在publisherLoop中被调用了，在main函数中被定义为PoseViewer::publishFullStateAsCallback
+  FullStateCallbackWithExtrinsics fullStateCallbackWithExtrinsics_; ///< Full state and extrinsics callback function. 这是一个空函数没有任何定义
+  LandmarksCallback landmarksCallback_; ///< Landmarks callback function.这是一个空函数没有任何定义
+  
   std::shared_ptr<std::fstream> csvImuFile_;  ///< IMU CSV file.
   std::shared_ptr<std::fstream> csvPosFile_;  ///< Position CSV File.
   std::shared_ptr<std::fstream> csvMagFile_;  ///< Magnetometer CSV File
   typedef std::map<size_t, std::shared_ptr<std::fstream>> FilePtrMap;
   FilePtrMap csvTracksFiles_; ///< Tracks CSV Files.
-  bool blocking_; ///< Blocking option. Whether the addMeasurement() functions should wait until proccessing is complete.
+  bool blocking_; ///默认被设置为了true< Blocking option. Whether the addMeasurement() functions should wait until proccessing is complete.
 };
 
 }  // namespace okvis

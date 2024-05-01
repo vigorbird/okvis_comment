@@ -44,7 +44,7 @@
 /// \brief okvis Main namespace of this package.
 namespace okvis {
 
-  typedef Eigen::Matrix<double,9,1> SpeedAndBias;
+  typedef Eigen::Matrix<double,9,1> SpeedAndBias;//前三个变量是速度 中间是角速度bias 最后三个是加速度的bias
 
   typedef Eigen::Matrix<double,3,1> Speed;
 

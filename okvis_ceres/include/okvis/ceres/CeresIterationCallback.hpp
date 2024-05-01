@@ -63,8 +63,7 @@ class CeresIterationCallback : public ::ceres::IterationCallback {
    * @param[in] iterationMinimum Minimum iterations the optimization should perform
    *            disregarding the time.
    */
-  CeresIterationCallback(double timeLimit, int iterationMinimum)
-      : timeLimit_(timeLimit),
+  CeresIterationCallback(double timeLimit, int iterationMinimum): timeLimit_(timeLimit),
         iterationMinimum_(iterationMinimum) {
   }
 
